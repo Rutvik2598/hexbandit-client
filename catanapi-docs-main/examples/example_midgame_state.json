@@ -1,0 +1,947 @@
+{
+  "num_players": 4,
+  "current_player_index": 0,
+  "current_turn_player_index": 0,
+  "num_turns": 74,
+  "action_step": 248,
+  "game_phase": "PLAY_TURN",
+  "discard_counts": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "current_turn_player_has_rolled": false,
+  "dev_card_played_this_turn": false,
+  "current_trade": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "players": [
+    {
+      "index": 0,
+      "color": "RED",
+      "name": "Red",
+      "victory_points": 3,
+      "resources": {
+        "wood": 2,
+        "brick": 0,
+        "sheep": 1,
+        "wheat": 1,
+        "ore": 0
+      },
+      "settlements": 1,
+      "cities": 1,
+      "roads_built": 2,
+      "has_longest_road": false,
+      "has_largest_army": false,
+      "longest_road_length": 1,
+      "knights_played": 2,
+      "num_dev_cards": 1,
+      "dev_cards_private": {
+        "knight": 1,
+        "year_of_plenty": 0,
+        "monopoly": 0,
+        "road_building": 0,
+        "victory_point": 0
+      },
+      "dev_cards_played": {
+        "knight": 2,
+        "year_of_plenty": 0,
+        "monopoly": 0,
+        "road_building": 0,
+        "victory_point": 0
+      },
+      "dev_cards_owned_at_start_private": {
+        "knight": true,
+        "year_of_plenty": false,
+        "monopoly": false,
+        "road_building": false
+      },
+      "port_resources": [],
+      "settlement_nodes": [
+        37
+      ],
+      "city_nodes": [
+        7
+      ],
+      "total_resources": 4,
+      "pip_count": 10,
+      "pip_by_resource": {
+        "sheep": 3,
+        "ore": 3,
+        "wheat": 4
+      },
+      "resource_types": [
+        "ore",
+        "sheep",
+        "wheat"
+      ]
+    },
+    {
+      "index": 1,
+      "color": "WHITE",
+      "name": "White",
+      "victory_points": 4,
+      "resources": {
+        "wood": 0,
+        "brick": 2,
+        "sheep": 0,
+        "wheat": 2,
+        "ore": 0
+      },
+      "settlements": 2,
+      "cities": 0,
+      "roads_built": 10,
+      "has_longest_road": true,
+      "has_largest_army": false,
+      "longest_road_length": 7,
+      "knights_played": 0,
+      "num_dev_cards": 0,
+      "dev_cards_private": {
+        "knight": 0,
+        "year_of_plenty": 0,
+        "monopoly": 0,
+        "road_building": 0,
+        "victory_point": 0
+      },
+      "dev_cards_played": {
+        "knight": 0,
+        "year_of_plenty": 0,
+        "monopoly": 0,
+        "road_building": 1,
+        "victory_point": 0
+      },
+      "dev_cards_owned_at_start_private": {
+        "knight": false,
+        "year_of_plenty": false,
+        "monopoly": false,
+        "road_building": false
+      },
+      "port_resources": [],
+      "settlement_nodes": [
+        0,
+        9
+      ],
+      "city_nodes": [],
+      "total_resources": 4,
+      "pip_count": 20,
+      "pip_by_resource": {
+        "wood": 5,
+        "brick": 5,
+        "wheat": 6,
+        "sheep": 4
+      },
+      "resource_types": [
+        "brick",
+        "sheep",
+        "wheat",
+        "wood"
+      ]
+    },
+    {
+      "index": 2,
+      "color": "BLUE",
+      "name": "Blue",
+      "victory_points": 2,
+      "resources": {
+        "wood": 0,
+        "brick": 1,
+        "sheep": 1,
+        "wheat": 0,
+        "ore": 2
+      },
+      "settlements": 2,
+      "cities": 0,
+      "roads_built": 4,
+      "has_longest_road": false,
+      "has_largest_army": false,
+      "longest_road_length": 3,
+      "knights_played": 0,
+      "num_dev_cards": 0,
+      "dev_cards_private": {
+        "knight": 0,
+        "year_of_plenty": 0,
+        "monopoly": 0,
+        "road_building": 0,
+        "victory_point": 0
+      },
+      "dev_cards_played": {
+        "knight": 0,
+        "year_of_plenty": 0,
+        "monopoly": 0,
+        "road_building": 0,
+        "victory_point": 0
+      },
+      "dev_cards_owned_at_start_private": {
+        "knight": false,
+        "year_of_plenty": false,
+        "monopoly": false,
+        "road_building": false
+      },
+      "port_resources": [
+        null,
+        "brick"
+      ],
+      "settlement_nodes": [
+        52,
+        33
+      ],
+      "city_nodes": [],
+      "total_resources": 4,
+      "pip_count": 7,
+      "pip_by_resource": {
+        "wheat": 2,
+        "sheep": 5
+      },
+      "resource_types": [
+        "sheep",
+        "wheat"
+      ]
+    },
+    {
+      "index": 3,
+      "color": "ORANGE",
+      "name": "Orange",
+      "victory_points": 2,
+      "resources": {
+        "wood": 1,
+        "brick": 0,
+        "sheep": 0,
+        "wheat": 3,
+        "ore": 1
+      },
+      "settlements": 2,
+      "cities": 0,
+      "roads_built": 3,
+      "has_longest_road": false,
+      "has_largest_army": false,
+      "longest_road_length": 2,
+      "knights_played": 1,
+      "num_dev_cards": 1,
+      "dev_cards_private": {
+        "knight": 0,
+        "year_of_plenty": 0,
+        "monopoly": 0,
+        "road_building": 0,
+        "victory_point": 1
+      },
+      "dev_cards_played": {
+        "knight": 1,
+        "year_of_plenty": 0,
+        "monopoly": 0,
+        "road_building": 0,
+        "victory_point": 0
+      },
+      "dev_cards_owned_at_start_private": {
+        "knight": false,
+        "year_of_plenty": false,
+        "monopoly": false,
+        "road_building": false
+      },
+      "port_resources": [],
+      "settlement_nodes": [
+        27,
+        13
+      ],
+      "city_nodes": [],
+      "total_resources": 5,
+      "pip_count": 20,
+      "pip_by_resource": {
+        "wheat": 8,
+        "sheep": 12
+      },
+      "resource_types": [
+        "sheep",
+        "wheat"
+      ]
+    }
+  ],
+  "board": {
+    "buildings": {
+      "37": {
+        "color": "RED",
+        "type": "SETTLEMENT"
+      },
+      "0": {
+        "color": "WHITE",
+        "type": "SETTLEMENT"
+      },
+      "52": {
+        "color": "BLUE",
+        "type": "SETTLEMENT"
+      },
+      "27": {
+        "color": "ORANGE",
+        "type": "SETTLEMENT"
+      },
+      "13": {
+        "color": "ORANGE",
+        "type": "SETTLEMENT"
+      },
+      "33": {
+        "color": "BLUE",
+        "type": "SETTLEMENT"
+      },
+      "9": {
+        "color": "WHITE",
+        "type": "SETTLEMENT"
+      },
+      "7": {
+        "color": "RED",
+        "type": "CITY"
+      }
+    },
+    "roads": {
+      "(14, 37)": "RED",
+      "(37, 14)": "RED",
+      "(0, 1)": "WHITE",
+      "(1, 0)": "WHITE",
+      "(23, 52)": "BLUE",
+      "(52, 23)": "BLUE",
+      "(8, 27)": "ORANGE",
+      "(27, 8)": "ORANGE",
+      "(13, 14)": "ORANGE",
+      "(14, 13)": "ORANGE",
+      "(32, 33)": "BLUE",
+      "(33, 32)": "BLUE",
+      "(2, 9)": "WHITE",
+      "(9, 2)": "WHITE",
+      "(6, 7)": "RED",
+      "(7, 6)": "RED",
+      "(0, 20)": "WHITE",
+      "(20, 0)": "WHITE",
+      "(1, 6)": "WHITE",
+      "(6, 1)": "WHITE",
+      "(2, 3)": "WHITE",
+      "(3, 2)": "WHITE",
+      "(0, 5)": "WHITE",
+      "(5, 0)": "WHITE",
+      "(22, 23)": "BLUE",
+      "(23, 22)": "BLUE",
+      "(52, 53)": "BLUE",
+      "(53, 52)": "BLUE",
+      "(27, 28)": "ORANGE",
+      "(28, 27)": "ORANGE",
+      "(3, 4)": "WHITE",
+      "(4, 3)": "WHITE",
+      "(19, 20)": "WHITE",
+      "(20, 19)": "WHITE",
+      "(4, 15)": "WHITE",
+      "(15, 4)": "WHITE",
+      "(1, 2)": "WHITE",
+      "(2, 1)": "WHITE"
+    },
+    "tiles": {
+      "(0, 0, 0)": {
+        "coordinate": [
+          0,
+          0,
+          0
+        ],
+        "resource": "WOOD",
+        "number": 6
+      },
+      "(1, -1, 0)": {
+        "coordinate": [
+          1,
+          -1,
+          0
+        ],
+        "resource": "WHEAT",
+        "number": 2
+      },
+      "(0, -1, 1)": {
+        "coordinate": [
+          0,
+          -1,
+          1
+        ],
+        "resource": "SHEEP",
+        "number": 9
+      },
+      "(-1, 0, 1)": {
+        "coordinate": [
+          -1,
+          0,
+          1
+        ],
+        "resource": "SHEEP",
+        "number": 5
+      },
+      "(-1, 1, 0)": {
+        "coordinate": [
+          -1,
+          1,
+          0
+        ],
+        "resource": "BRICK",
+        "number": 3
+      },
+      "(0, 1, -1)": {
+        "coordinate": [
+          0,
+          1,
+          -1
+        ],
+        "resource": "BRICK",
+        "number": 4
+      },
+      "(1, 0, -1)": {
+        "coordinate": [
+          1,
+          0,
+          -1
+        ],
+        "resource": "BRICK",
+        "number": 11
+      },
+      "(2, -2, 0)": {
+        "coordinate": [
+          2,
+          -2,
+          0
+        ],
+        "resource": "WHEAT",
+        "number": 10
+      },
+      "(1, -2, 1)": {
+        "coordinate": [
+          1,
+          -2,
+          1
+        ],
+        "resource": "WHEAT",
+        "number": 8
+      },
+      "(0, -2, 2)": {
+        "coordinate": [
+          0,
+          -2,
+          2
+        ],
+        "resource": "ORE",
+        "number": 12
+      },
+      "(-1, -1, 2)": {
+        "coordinate": [
+          -1,
+          -1,
+          2
+        ],
+        "resource": "SHEEP",
+        "number": 6
+      },
+      "(-2, 0, 2)": {
+        "coordinate": [
+          -2,
+          0,
+          2
+        ],
+        "resource": "SHEEP",
+        "number": 4
+      },
+      "(-2, 1, 1)": {
+        "coordinate": [
+          -2,
+          1,
+          1
+        ],
+        "resource": "ORE",
+        "number": 10
+      },
+      "(-2, 2, 0)": {
+        "coordinate": [
+          -2,
+          2,
+          0
+        ],
+        "resource": "WOOD",
+        "number": 9
+      },
+      "(-1, 2, -1)": {
+        "coordinate": [
+          -1,
+          2,
+          -1
+        ],
+        "resource": "ORE",
+        "number": 11
+      },
+      "(0, 2, -2)": {
+        "coordinate": [
+          0,
+          2,
+          -2
+        ],
+        "resource": "WOOD",
+        "number": 8
+      },
+      "(1, 1, -2)": {
+        "coordinate": [
+          1,
+          1,
+          -2
+        ],
+        "resource": "WOOD",
+        "number": 5
+      },
+      "(2, 0, -2)": {
+        "coordinate": [
+          2,
+          0,
+          -2
+        ],
+        "resource": "WHEAT",
+        "number": 3
+      },
+      "(2, -1, -1)": {
+        "coordinate": [
+          2,
+          -1,
+          -1
+        ],
+        "resource": null,
+        "number": null
+      }
+    },
+    "robber_coordinate": [
+      1,
+      -2,
+      1
+    ],
+    "ports": [
+      {
+        "resource": "WHEAT",
+        "coordinate": [
+          3,
+          -3,
+          0
+        ],
+        "id": 0,
+        "direction": "WEST",
+        "nodes": [
+          25,
+          26
+        ]
+      },
+      {
+        "resource": null,
+        "coordinate": [
+          1,
+          -3,
+          2
+        ],
+        "id": 1,
+        "direction": "NORTHWEST",
+        "nodes": [
+          28,
+          29
+        ]
+      },
+      {
+        "resource": null,
+        "coordinate": [
+          -1,
+          -2,
+          3
+        ],
+        "id": 2,
+        "direction": "NORTHWEST",
+        "nodes": [
+          32,
+          33
+        ]
+      },
+      {
+        "resource": "ORE",
+        "coordinate": [
+          -3,
+          0,
+          3
+        ],
+        "id": 3,
+        "direction": "NORTHEAST",
+        "nodes": [
+          35,
+          36
+        ]
+      },
+      {
+        "resource": null,
+        "coordinate": [
+          -3,
+          2,
+          1
+        ],
+        "id": 4,
+        "direction": "EAST",
+        "nodes": [
+          38,
+          39
+        ]
+      },
+      {
+        "resource": "SHEEP",
+        "coordinate": [
+          -2,
+          3,
+          -1
+        ],
+        "id": 5,
+        "direction": "EAST",
+        "nodes": [
+          40,
+          44
+        ]
+      },
+      {
+        "resource": null,
+        "coordinate": [
+          0,
+          3,
+          -3
+        ],
+        "id": 6,
+        "direction": "SOUTHEAST",
+        "nodes": [
+          47,
+          45
+        ]
+      },
+      {
+        "resource": "WOOD",
+        "coordinate": [
+          2,
+          1,
+          -3
+        ],
+        "id": 7,
+        "direction": "SOUTHWEST",
+        "nodes": [
+          48,
+          49
+        ]
+      },
+      {
+        "resource": "BRICK",
+        "coordinate": [
+          3,
+          -1,
+          -2
+        ],
+        "id": 8,
+        "direction": "SOUTHWEST",
+        "nodes": [
+          52,
+          53
+        ]
+      }
+    ],
+    "node_positions": {
+      "0": [
+        0.3333333333333333,
+        0.3333333333333333,
+        -0.6666666666666666
+      ],
+      "1": [
+        0.6666666666666666,
+        -0.3333333333333333,
+        -0.3333333333333333
+      ],
+      "2": [
+        0.3333333333333333,
+        -0.6666666666666666,
+        0.3333333333333333
+      ],
+      "3": [
+        -0.3333333333333333,
+        -0.3333333333333333,
+        0.6666666666666666
+      ],
+      "4": [
+        -0.6666666666666666,
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "5": [
+        -0.3333333333333333,
+        0.6666666666666666,
+        -0.3333333333333333
+      ],
+      "6": [
+        1.3333333333333333,
+        -0.6666666666666666,
+        -0.6666666666666666
+      ],
+      "7": [
+        1.6666666666666667,
+        -1.3333333333333333,
+        -0.3333333333333333
+      ],
+      "8": [
+        1.3333333333333333,
+        -1.6666666666666667,
+        0.3333333333333333
+      ],
+      "9": [
+        0.6666666666666666,
+        -1.3333333333333333,
+        0.6666666666666666
+      ],
+      "10": [
+        0.3333333333333333,
+        -1.6666666666666667,
+        1.3333333333333333
+      ],
+      "11": [
+        -0.3333333333333333,
+        -1.3333333333333333,
+        1.6666666666666667
+      ],
+      "12": [
+        -0.6666666666666666,
+        -0.6666666666666666,
+        1.3333333333333333
+      ],
+      "13": [
+        -1.3333333333333333,
+        -0.3333333333333333,
+        1.6666666666666667
+      ],
+      "14": [
+        -1.6666666666666667,
+        0.3333333333333333,
+        1.3333333333333333
+      ],
+      "15": [
+        -1.3333333333333333,
+        0.6666666666666666,
+        0.6666666666666666
+      ],
+      "16": [
+        -0.6666666666666666,
+        1.3333333333333333,
+        -0.6666666666666666
+      ],
+      "17": [
+        -1.6666666666666667,
+        1.3333333333333333,
+        0.3333333333333333
+      ],
+      "18": [
+        -1.3333333333333333,
+        1.6666666666666667,
+        -0.3333333333333333
+      ],
+      "19": [
+        0.3333333333333333,
+        1.3333333333333333,
+        -1.6666666666666667
+      ],
+      "20": [
+        0.6666666666666666,
+        0.6666666666666666,
+        -1.3333333333333333
+      ],
+      "21": [
+        -0.3333333333333333,
+        1.6666666666666667,
+        -1.3333333333333333
+      ],
+      "22": [
+        1.3333333333333333,
+        0.3333333333333333,
+        -1.6666666666666667
+      ],
+      "23": [
+        1.6666666666666667,
+        -0.3333333333333333,
+        -1.3333333333333333
+      ],
+      "24": [
+        2.3333333333333335,
+        -1.6666666666666667,
+        -0.6666666666666666
+      ],
+      "25": [
+        2.6666666666666665,
+        -2.3333333333333335,
+        -0.3333333333333333
+      ],
+      "26": [
+        2.3333333333333335,
+        -2.6666666666666665,
+        0.3333333333333333
+      ],
+      "27": [
+        1.6666666666666667,
+        -2.3333333333333335,
+        0.6666666666666666
+      ],
+      "28": [
+        1.3333333333333333,
+        -2.6666666666666665,
+        1.3333333333333333
+      ],
+      "29": [
+        0.6666666666666666,
+        -2.3333333333333335,
+        1.6666666666666667
+      ],
+      "30": [
+        0.3333333333333333,
+        -2.6666666666666665,
+        2.3333333333333335
+      ],
+      "31": [
+        -0.3333333333333333,
+        -2.3333333333333335,
+        2.6666666666666665
+      ],
+      "32": [
+        -0.6666666666666666,
+        -1.6666666666666667,
+        2.3333333333333335
+      ],
+      "33": [
+        -1.3333333333333333,
+        -1.3333333333333333,
+        2.6666666666666665
+      ],
+      "34": [
+        -1.6666666666666667,
+        -0.6666666666666666,
+        2.3333333333333335
+      ],
+      "35": [
+        -2.3333333333333335,
+        -0.3333333333333333,
+        2.6666666666666665
+      ],
+      "36": [
+        -2.6666666666666665,
+        0.3333333333333333,
+        2.3333333333333335
+      ],
+      "37": [
+        -2.3333333333333335,
+        0.6666666666666666,
+        1.6666666666666667
+      ],
+      "38": [
+        -2.6666666666666665,
+        1.3333333333333333,
+        1.3333333333333333
+      ],
+      "39": [
+        -2.3333333333333335,
+        1.6666666666666667,
+        0.6666666666666666
+      ],
+      "40": [
+        -1.6666666666666667,
+        2.3333333333333335,
+        -0.6666666666666666
+      ],
+      "41": [
+        -2.6666666666666665,
+        2.3333333333333335,
+        0.3333333333333333
+      ],
+      "42": [
+        -2.3333333333333335,
+        2.6666666666666665,
+        -0.3333333333333333
+      ],
+      "43": [
+        -0.6666666666666666,
+        2.3333333333333335,
+        -1.6666666666666667
+      ],
+      "44": [
+        -1.3333333333333333,
+        2.6666666666666665,
+        -1.3333333333333333
+      ],
+      "45": [
+        0.3333333333333333,
+        2.3333333333333335,
+        -2.6666666666666665
+      ],
+      "46": [
+        0.6666666666666666,
+        1.6666666666666667,
+        -2.3333333333333335
+      ],
+      "47": [
+        -0.3333333333333333,
+        2.6666666666666665,
+        -2.3333333333333335
+      ],
+      "48": [
+        1.3333333333333333,
+        1.3333333333333333,
+        -2.6666666666666665
+      ],
+      "49": [
+        1.6666666666666667,
+        0.6666666666666666,
+        -2.3333333333333335
+      ],
+      "50": [
+        2.3333333333333335,
+        0.3333333333333333,
+        -2.6666666666666665
+      ],
+      "51": [
+        2.6666666666666665,
+        -0.3333333333333333,
+        -2.3333333333333335
+      ],
+      "52": [
+        2.3333333333333335,
+        -0.6666666666666666,
+        -1.6666666666666667
+      ],
+      "53": [
+        2.6666666666666665,
+        -1.3333333333333333,
+        -1.3333333333333333
+      ]
+    }
+  },
+  "bank_resources": {
+    "wood": 16,
+    "brick": 16,
+    "sheep": 17,
+    "wheat": 13,
+    "ore": 16
+  },
+  "dev_deck_private": {
+    "knight": 10,
+    "year_of_plenty": 2,
+    "monopoly": 2,
+    "road_building": 1,
+    "victory_point": 4
+  },
+  "current_player_color": "RED",
+  "dev_cards_remaining": 19,
+  "game_config": {
+    "friendly_robber": false,
+    "balanced_dice": false,
+    "discard_limit": 7,
+    "vps_to_win": 10,
+    "turns_limit": 1000,
+    "shuffle_seats": true
+  }
+}

@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #0d0f14;
+  color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2d3748;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4a5568;
+}
+
+/* Hex board SVG transitions */
+.hex-tile {
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+.hex-tile:hover {
+  filter: brightness(1.25);
+}
+
+.vertex-node {
+  transition: r 0.1s ease, fill 0.1s ease;
+  cursor: pointer;
+}
+.road-edge {
+  transition: stroke-width 0.1s ease, stroke-opacity 0.1s ease;
+  cursor: pointer;
+}
+
+/* Thinking indicator pulse */
+@keyframes thinking-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.thinking-pulse {
+  animation: thinking-pulse 1.2s ease-in-out infinite;
+}
+
+/* Eval bar segments */
+.eval-segment {
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card hover lift */
+.card-lift {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.card-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Resource card */
+.resource-card {
+  transition: transform 0.1s ease, background 0.1s ease;
+}
+.resource-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Glow effects */
+.legal-glow {
+  filter: drop-shadow(0 0 6px rgba(100, 200, 255, 0.7));
+}
+.selected-glow {
+  filter: drop-shadow(0 0 8px rgba(250, 200, 50, 0.8));
+}
+.robber-glow {
+  filter: drop-shadow(0 0 10px rgba(220, 80, 80, 0.8));
+}

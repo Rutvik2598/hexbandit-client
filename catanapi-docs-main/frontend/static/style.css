@@ -1,0 +1,527 @@
+/* Hexbandit Frontend Styles – CAT-141 */
+
+:root {
+    --bg: #1a1a2e;
+    --bg-panel: #16213e;
+    --bg-card: #0f3460;
+    --accent: #e94560;
+    --accent-hover: #ff6b81;
+    --text: #eee;
+    --text-muted: #aaa;
+    --success: #2ecc71;
+    --warning: #f39c12;
+    --border: #2c3e6b;
+
+    /* Player colors */
+    --color-red: #e74c3c;
+    --color-blue: #3498db;
+    --color-white: #ecf0f1;
+    --color-orange: #e67e22;
+
+    /* Resource colors */
+    --wood: #27ae60;
+    --brick: #c0392b;
+    --sheep: #a8e6cf;
+    --wheat: #f1c40f;
+    --ore: #7f8c8d;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+/* Screens */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Setup Screen */
+#setup-screen {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+#setup-screen header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+#setup-screen h1 {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+}
+
+.version-info {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    opacity: 0.7;
+    margin-top: 4px;
+}
+
+.setup-form {
+    background: var(--bg-panel);
+    border-radius: 12px;
+    padding: 30px;
+    border: 1px solid var(--border);
+}
+
+.setup-form h2 {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.form-group select,
+.form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1rem;
+}
+
+.player-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.player-color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.player-row label {
+    min-width: 80px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.player-row select {
+    flex: 1;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--text);
+}
+
+/* Buttons */
+.btn-primary {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 16px;
+}
+
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled {
+    background: #555;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 8px;
+}
+
+.btn-secondary:hover { background: var(--border); }
+
+.btn-small {
+    padding: 6px 14px;
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.btn-small:hover { background: var(--border); }
+
+.error-msg {
+    margin-top: 12px;
+    padding: 10px;
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid var(--color-red);
+    border-radius: 6px;
+    color: var(--color-red);
+    font-size: 0.9rem;
+}
+
+.loading {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 10px;
+}
+
+.hidden { display: none !important; }
+
+/* Game Screen */
+.game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+}
+
+.game-header h1 { font-size: 1.3rem; }
+
+.game-info {
+    display: flex;
+    gap: 16px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.game-info span {
+    padding: 4px 10px;
+    background: var(--bg);
+    border-radius: 4px;
+}
+
+/* Game Layout */
+.game-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr 220px;
+    gap: 0;
+    height: calc(100vh - 54px);
+}
+
+.panel {
+    padding: 16px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+}
+
+.panel:last-child {
+    border-right: none;
+    border-left: 1px solid var(--border);
+}
+
+.panel h3 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+
+/* Players Panel */
+.player-card {
+    padding: 12px;
+    margin-bottom: 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    border-left: 4px solid transparent;
+}
+
+.player-card.active {
+    border-left-color: var(--accent);
+    background: var(--bg-card);
+}
+
+.player-card .player-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.player-card .player-name .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.player-card .player-vp {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.player-card .player-stats {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.player-resources {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.resource-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.resource-badge.wood { background: var(--wood); color: #fff; }
+.resource-badge.brick { background: var(--brick); color: #fff; }
+.resource-badge.sheep { background: var(--sheep); color: #333; }
+.resource-badge.wheat { background: var(--wheat); color: #333; }
+.resource-badge.ore { background: var(--ore); color: #fff; }
+
+/* Center Panel */
+.center-panel {
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.status-bar {
+    padding: 10px 16px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+#board-container {
+    background: var(--bg-panel);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    min-height: 200px;
+}
+
+#board-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+#board-buildings, #board-robber {
+    font-size: 0.85rem;
+}
+
+#board-buildings .building-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Actions Panel */
+#actions-panel {
+    background: var(--bg-panel);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--border);
+}
+
+#actions-panel h3 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+#action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.action-btn {
+    padding: 6px 12px;
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: all 0.15s;
+}
+
+.action-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Game Log */
+#game-log-panel {
+    background: var(--bg-panel);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#game-log-panel h3 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+#game-log {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.log-entry {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.log-entry .log-color { font-weight: 600; }
+
+.log-entry.log-error {
+    color: #f5b7b1;
+}
+
+.log-entry.log-warning {
+    color: #f9e79f;
+}
+
+.log-diagnostics-btn {
+    margin-left: 6px;
+    border: 1px solid #6c7a89;
+    background: #2c3e50;
+    color: #ecf0f1;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+
+.log-diagnostics-btn:hover {
+    background: #34495e;
+}
+
+/* Info Panel (Right) */
+.info-panel .resource-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.85rem;
+}
+
+/* Winner Overlay */
+.overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.overlay-content {
+    background: var(--bg-panel);
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    max-width: 400px;
+}
+
+.overlay-content h2 {
+    font-size: 2rem;
+    margin-bottom: 16px;
+}
+
+.overlay-content p {
+    font-size: 1.1rem;
+    margin-bottom: 24px;
+    color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .game-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    .panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+}
+
+/* ── Version Watermark ────────────────────────────────────────────────── */
+.game-watermark {
+    position: fixed;
+    bottom: 8px;
+    right: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 50;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    letter-spacing: 0.3px;
+}

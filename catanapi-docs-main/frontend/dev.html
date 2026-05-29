@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexbandit – Dev</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- API Base URL Switcher -->
+        <div id="api-bar" style="background:#0d0d1a;padding:8px 16px;display:flex;align-items:center;gap:12px;font-size:13px;border-bottom:1px solid #333;">
+            <label style="color:#888;">API Base:</label>
+            <select id="api-base-select" style="background:#1a1a2e;color:#eee;border:1px solid #444;padding:4px 8px;border-radius:4px;">
+                <option value="">This server (relative)</option>
+                <option value="http://localhost:8000">localhost:8000</option>
+                <option value="http://localhost:5000">localhost:5000</option>
+                <option value="https://staging-api.hexbandit.io">staging-api.hexbandit.io</option>
+            </select>
+            <input id="api-base-custom" type="text" placeholder="Custom URL (e.g. https://staging.example.com)" style="background:#1a1a2e;color:#eee;border:1px solid #444;padding:4px 8px;border-radius:4px;flex:1;max-width:400px;display:none;">
+            <button onclick="toggleCustomUrl()" style="background:#2a2a4e;color:#eee;border:1px solid #444;padding:4px 10px;border-radius:4px;cursor:pointer;">Custom…</button>
+            <span style="border-left:1px solid #444;height:18px;margin:0 4px;"></span>
+            <label for="api-key-input" style="color:#888;">Key:</label>
+            <input id="api-key-input" type="password" placeholder="API Key (staging)"
+                   autocomplete="off" spellcheck="false"
+                   style="background:#1a1a2e;color:#eee;border:1px solid #444;padding:4px 8px;border-radius:4px;width:180px;font-size:12px;">
+            <button id="api-key-toggle" onclick="toggleApiKeyVisibility()" title="Show/hide key"
+                    aria-label="Show/hide API key"
+                    style="background:#2a2a4e;color:#eee;border:1px solid #444;padding:4px 10px;border-radius:4px;cursor:pointer;">👁</button>
+                <button id="api-key-test" onclick="testApiKey()" title="Validate API key" aria-label="Validate API key"
+                    style="background:#2a2a4e;color:#eee;border:1px solid #444;padding:4px 10px;border-radius:4px;cursor:pointer;">Test Key</button>
+            <span id="api-key-status" style="color:#4caf50;font-size:12px;min-width:16px;"></span>
+            <a href="/play" style="color:#4fc3f7;margin-left:auto;">→ Play Mode</a>
+        </div>
+
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="screen active">
+            <header>
+                <h1>🔧 Hexbandit Dev</h1>
+                <p class="subtitle">API testing &amp; debugging tool</p>
+            </header>
+            <div class="setup-form">
+                <h2>New Game</h2>
+                <div class="form-group">
+                    <label for="num-players">Number of Players</label>
+                    <select id="num-players">
+                        <option value="2">2 Players</option>
+                        <option value="3">3 Players</option>
+                        <option value="4" selected>4 Players</option>
+                    </select>
+                </div>
+                <div id="player-config">
+                    <!-- Dynamically generated -->
+                </div>
+                <div class="form-group">
+                    <label for="game-seed">Seed (optional)</label>
+                    <input type="number" id="game-seed" placeholder="Random">
+                </div>
+                <button id="btn-create-game" class="btn-primary">Start Game</button>
+                <div id="setup-error" class="error-msg hidden"></div>
+                <div id="loading-agents" class="loading">Loading agents...</div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <header class="game-header">
+                <h1>Hexbandit</h1>
+                <div class="game-info">
+                    <span id="game-id-display"></span>
+                    <span id="turn-display"></span>
+                    <span id="phase-display"></span>
+                </div>
+                <button id="btn-back" class="btn-small">← New Game</button>
+            </header>
+
+            <div class="game-layout">
+                <!-- Left Panel: Players -->
+                <div class="panel players-panel">
+                    <h3>Players</h3>
+                    <div id="players-list"></div>
+                </div>
+
+                <!-- Center: Game Board + Actions -->
+                <div class="center-panel">
+                    <div id="game-status-bar" class="status-bar"></div>
+
+                    <div id="board-container">
+                        <div id="board-info">
+                            <div id="board-buildings"></div>
+                            <div id="board-robber"></div>
+                        </div>
+                    </div>
+
+                    <div id="actions-panel">
+                        <h3>Actions</h3>
+                        <div id="action-buttons"></div>
+                        <button id="btn-ai-move" class="btn-primary">AI Move</button>
+                        <button id="btn-auto-play" class="btn-secondary">Auto-Play (10 moves)</button>
+                    </div>
+
+                    <div id="game-log-panel">
+                        <h3>Game Log</h3>
+                        <div id="game-log"></div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Resources & Info -->
+                <div class="panel info-panel">
+                    <h3>Bank</h3>
+                    <div id="bank-resources"></div>
+                    <h3>Dev Cards</h3>
+                    <div id="dev-cards-remaining"></div>
+                </div>
+            </div>
+
+            <!-- Winner overlay -->
+            <div id="winner-overlay" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2>🎉 Game Over!</h2>
+                    <p id="winner-message"></p>
+                    <button id="btn-new-game" class="btn-primary">New Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base URL switcher
+        function getApiOrigin() {
+            const custom = document.getElementById('api-base-custom');
+            if (custom && custom.style.display !== 'none' && custom.value.trim()) {
+                const val = custom.value.trim();
+                if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
+                    custom.style.borderColor = '#f44336';
+                    custom.title = 'URL must start with http:// or https://';
+                    throw new Error(`Invalid API URL: "${val}" must start with http:// or https://`);
+                }
+                custom.style.borderColor = '#444';
+                custom.title = '';
+                return val;
+            }
+            const sel = document.getElementById('api-base-select');
+            return sel ? sel.value : '';
+        }
+        function toggleCustomUrl() {
+            const el = document.getElementById('api-base-custom');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+        // Restore saved
+        (function() {
+            const saved = localStorage.getItem('hexbandit_api_origin');
+            if (saved) {
+                const sel = document.getElementById('api-base-select');
+                const opts = Array.from(sel.options).map(o => o.value);
+                if (opts.includes(saved)) { sel.value = saved; }
+                else { document.getElementById('api-base-custom').value = saved; document.getElementById('api-base-custom').style.display = 'block'; }
+            }
+        })();
+        document.getElementById('api-base-select')?.addEventListener('change', function() { localStorage.setItem('hexbandit_api_origin', this.value); });
+        document.getElementById('api-base-custom')?.addEventListener('input', function() {
+            localStorage.setItem('hexbandit_api_origin', this.value);
+            const val = this.value.trim();
+            if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
+                this.style.borderColor = '#f44336';
+                this.title = 'URL must start with http:// or https://';
+            } else {
+                this.style.borderColor = '#444';
+                this.title = '';
+            }
+        });
+
+        // ── API Key input ────────────────────────────────────────────
+        function toggleApiKeyVisibility() {
+            const inp = document.getElementById('api-key-input');
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+        }
+        (function() {
+            const saved = sessionStorage.getItem('hexbandit_api_key');
+            if (saved) document.getElementById('api-key-input').value = saved;
+        })();
+        let _keyInputDebounce;
+        document.getElementById('api-key-input')?.addEventListener('input', function() {
+            const key = this.value.trim();
+            if (key) {
+                sessionStorage.setItem('hexbandit_api_key', key);
+            } else {
+                sessionStorage.removeItem('hexbandit_api_key');
+            }
+            const st = document.getElementById('api-key-status');
+            st.textContent = key ? '✓' : '';
+            clearTimeout(st._tid);
+            st._tid = setTimeout(() => { st.textContent = ''; }, 1500);
+            // Debounced — avoids burst of requests while typing the key
+            clearTimeout(_keyInputDebounce);
+            _keyInputDebounce = setTimeout(() => { if (typeof loadAgents === 'function') loadAgents(); }, 300);
+        });
+    </script>
+    <script src="/static/dev.js"></script>
+</body>
+</html>
