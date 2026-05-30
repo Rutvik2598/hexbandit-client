@@ -16,6 +16,7 @@ import {
 import HexTile3D from './HexTile3D';
 import RoadEdge3D from './RoadEdge3D';
 import VertexNode3D from './VertexNode3D';
+import Port3D from './Port3D';
 import type { PlayableAction, PlayerColor } from '@/shared/types/game';
 
 interface GameBoard3DProps {
@@ -382,6 +383,11 @@ function BoardScene({ onAction, disabled }: BoardSceneProps) {
           />
         );
       })}
+
+      {/* Ports */}
+      {board.ports.map((port, i) => (
+        <Port3D key={i} port={port} />
+      ))}
 
       {/* Vertex nodes (settlements & cities) */}
       {Array.from({ length: 54 }, (_, nodeId) => {

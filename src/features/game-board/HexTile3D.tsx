@@ -178,24 +178,43 @@ export default function HexTile3D({
       {/* 3D number token — scales with zoom, no pointer event blocking */}
       {hasToken && <NumberToken3D number={tile.number!} />}
 
-      {/* Robber — positioned above token when present */}
+      {/* Robber — hooded figure with glowing eyes */}
       {hasRobber && (
         <group position={[0, robberBaseY, 0]}>
-          <mesh position={[0, 0.22, 0]} castShadow>
-            <cylinderGeometry args={[0.18, 0.14, 0.32, 8]} />
-            <meshStandardMaterial color="#111" roughness={0.8} />
+          {/* Warning ring at base */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.26, 0.028, 8, 32]} />
+            <meshStandardMaterial color="#ff3333" emissive="#ff1111" emissiveIntensity={1.5} />
           </mesh>
-          <mesh position={[0, 0.44, 0]} castShadow>
-            <sphereGeometry args={[0.13, 8, 8]} />
-            <meshStandardMaterial color="#111" roughness={0.8} />
+          {/* Cloaked body */}
+          <mesh position={[0, 0.175, 0]} castShadow>
+            <cylinderGeometry args={[0.10, 0.20, 0.35, 8]} />
+            <meshStandardMaterial color="#4a4a4a" roughness={0.92} metalness={0.05} />
           </mesh>
-          <mesh position={[0, 0.52, 0]} castShadow>
-            <coneGeometry args={[0.18, 0.22, 8]} />
-            <meshStandardMaterial color="#1a1a2e" roughness={0.9} />
+          {/* Shoulder flare */}
+          <mesh position={[0, 0.36, 0]} castShadow>
+            <cylinderGeometry args={[0.155, 0.105, 0.07, 8]} />
+            <meshStandardMaterial color="#4a4a4a" roughness={0.92} metalness={0.05} />
           </mesh>
-          <mesh position={[0, 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.26, 0.025, 8, 24]} />
-            <meshStandardMaterial color="#ff4444" emissive="#ff2222" emissiveIntensity={0.8} />
+          {/* Head */}
+          <mesh position={[0, 0.445, 0]} castShadow>
+            <sphereGeometry args={[0.095, 10, 8]} />
+            <meshStandardMaterial color="#5a5a5a" roughness={0.85} metalness={0.08} />
+          </mesh>
+          {/* Hood */}
+          <mesh position={[0, 0.465, 0]} castShadow>
+            <coneGeometry args={[0.165, 0.24, 8]} />
+            <meshStandardMaterial color="#3a3a3a" roughness={0.96} metalness={0.0} />
+          </mesh>
+          {/* Left eye */}
+          <mesh position={[-0.040, 0.455, 0.082]}>
+            <sphereGeometry args={[0.017, 6, 6]} />
+            <meshStandardMaterial color="#ff2020" emissive="#ff0000" emissiveIntensity={2.5} />
+          </mesh>
+          {/* Right eye */}
+          <mesh position={[0.040, 0.455, 0.082]}>
+            <sphereGeometry args={[0.017, 6, 6]} />
+            <meshStandardMaterial color="#ff2020" emissive="#ff0000" emissiveIntensity={2.5} />
           </mesh>
         </group>
       )}
