@@ -73,28 +73,37 @@ function City({ color }: { color: PlayerColor }) {
 }
 
 function LegalIndicator({ isHovered }: { isHovered?: boolean }) {
-  const ref = useRef<THREE.Mesh>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
 
   useFrame(({ clock }) => {
-    if (!ref.current) return;
-    const t = clock.getElapsedTime();
-    const mat = ref.current.material as THREE.MeshStandardMaterial;
-    mat.opacity = isHovered ? 0.85 : 0.35 + Math.sin(t * 2.5) * 0.2;
-    ref.current.rotation.y = t * 0.8;
+    if (!ringRef.current) return;
+    const mat = ringRef.current.material as THREE.MeshBasicMaterial;
+    mat.opacity = 0.6 + Math.sin(clock.getElapsedTime() * 3) * 0.15;
   });
 
   return (
-    <mesh ref={ref} position={[0, 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
-      <torusGeometry args={[0.22, 0.035, 8, 24]} />
-      <meshStandardMaterial
-        color={isHovered ? '#90caf9' : '#64b5f6'}
-        emissive="#3080c0"
-        emissiveIntensity={isHovered ? 0.7 : 0.3}
-        transparent
-        opacity={0.5}
-        depthWrite={false}
-      />
-    </mesh>
+    <group>
+      {/* Always present — invisible hit area so onPointerEnter fires before the ring appears */}
+      <mesh position={[0, 0.007, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
+        <circleGeometry args={[0.28, 32]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} depthTest={false} />
+      </mesh>
+
+      {/* Ring — only mounts on hover */}
+      {isHovered && (
+        <mesh ref={ringRef} position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={11}>
+          <ringGeometry args={[0.13, 0.28, 48]} />
+          <meshBasicMaterial
+            color="#2a7040"
+            transparent
+            opacity={0.7}
+            depthWrite={false}
+            depthTest={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+    </group>
   );
 }
 

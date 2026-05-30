@@ -2,15 +2,7 @@ import * as THREE from 'three';
 
 const fitCache = new Map<THREE.Texture, THREE.Texture>();
 
-/**
- * Detects the bounding box of non-transparent pixels in the texture image and
- * scales the content to fill the full canvas. This normalises textures whose
- * hexagonal artwork is inset from the image edges (transparent padding), making
- * them cover the UV hex exactly the same way brick/ore do.
- *
- * Full-coverage images (brick, ore) are returned as-is after a fast scan at
- * 128×128 resolution detects no inset.
- */
+// Crops transparent padding from hex-shaped PNGs and scales content to cover the UV hex.
 export function fitTextureToHex(texture: THREE.Texture): THREE.Texture {
   if (fitCache.has(texture)) return fitCache.get(texture)!;
 
@@ -20,7 +12,6 @@ export function fitTextureToHex(texture: THREE.Texture): THREE.Texture {
   const origW = img.naturalWidth || img.width;
   const origH = img.naturalHeight || img.height;
 
-  // Scan at reduced resolution for speed
   const S = 128;
   const scanCanvas = document.createElement('canvas');
   scanCanvas.width = S;
@@ -41,7 +32,6 @@ export function fitTextureToHex(texture: THREE.Texture): THREE.Texture {
     }
   }
 
-  // No transparent inset found — return original unchanged
   if (minX <= 1 && minY <= 1 && maxX >= S - 2 && maxY >= S - 2) {
     fitCache.set(texture, texture);
     return texture;
@@ -52,14 +42,14 @@ export function fitTextureToHex(texture: THREE.Texture): THREE.Texture {
     return texture;
   }
 
-  // Map bounding box back to original image coordinates
   const ratio = origW / S;
   const srcX = Math.floor(minX * ratio);
   const srcY = Math.floor(minY * ratio);
   const srcW = Math.ceil((maxX - minX + 1) * ratio);
   const srcH = Math.ceil((maxY - minY + 1) * ratio);
 
-  // Scale so the content fills the canvas (uniform scale, centered)
+  // Use Math.max (cover) so the hex content overshoots the canvas edges rather
+  // than fitting inside — this ensures the UV hex samples opaque pixels everywhere.
   const scale = Math.max(origW / srcW, origH / srcH);
   const drawW = srcW * scale;
   const drawH = srcH * scale;
@@ -74,7 +64,7 @@ export function fitTextureToHex(texture: THREE.Texture): THREE.Texture {
 
   const newTex = new THREE.CanvasTexture(outCanvas);
   newTex.flipY = texture.flipY;
-  newTex.colorSpace = texture.colorSpace;
+  newTex.colorSpace = THREE.SRGBColorSpace;
   newTex.needsUpdate = true;
 
   fitCache.set(texture, newTex);
