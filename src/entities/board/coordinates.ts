@@ -75,12 +75,6 @@ export function cubeToKey(x: number, y: number, z: number): string {
   return `(${x}, ${y}, ${z})`;
 }
 
-// Parse edge key "(a, b)" → [a, b]
-export function parseEdgeKey(key: string): [number, number] {
-  const parts = key.replace(/[()[\]]/g, '').split(',').map(Number);
-  return [parts[0], parts[1]];
-}
-
 // Canonical edge key (smaller node first)
 export function edgeKey(a: number, b: number): string {
   return `(${Math.min(a, b)}, ${Math.max(a, b)})`;

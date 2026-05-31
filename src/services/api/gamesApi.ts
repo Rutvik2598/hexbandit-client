@@ -50,6 +50,3 @@ export async function getRecording(gameId: string): Promise<RecordingResponse> {
   return api.get<RecordingResponse>(`/games/${gameId}/recording`);
 }
 
-export async function getRecordingFrame(gameId: string, step: number): Promise<RecordingResponse> {
-  return api.get<RecordingResponse>(`/games/${gameId}/recording/${step}`);
-}

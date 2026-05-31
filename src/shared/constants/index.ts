@@ -54,12 +54,6 @@ export const RESOURCE_LABELS: Record<ResourceType, string> = {
 
 export const RESOURCE_ORDER: ResourceType[] = ['wood', 'brick', 'sheep', 'wheat', 'ore'];
 
-// Resource index (for API encoding)
-export const RESOURCE_BY_INDEX: ResourceType[] = ['wood', 'brick', 'sheep', 'wheat', 'ore'];
-export const RESOURCE_INDEX: Record<ResourceType, number> = {
-  wood: 0, brick: 1, sheep: 2, wheat: 3, ore: 4,
-};
-
 export const DEV_CARD_LABELS: Record<string, string> = {
   knight: 'Knight',
   year_of_plenty: 'Year of Plenty',
@@ -67,50 +61,6 @@ export const DEV_CARD_LABELS: Record<string, string> = {
   road_building: 'Road Building',
   victory_point: 'Victory Point',
 };
-
-export const DEV_CARD_EMOJI: Record<string, string> = {
-  knight: '⚔️',
-  year_of_plenty: '🎁',
-  monopoly: '💰',
-  road_building: '🛤️',
-  victory_point: '⭐',
-};
-
-export const TILE_RESOURCE_COLORS: Record<string, string> = {
-  WOOD: '#15803d',
-  BRICK: '#b91c1c',
-  SHEEP: '#65a30d',
-  WHEAT: '#ca8a04',
-  ORE: '#475569',
-  DESERT: '#c2a26d',
-};
-
-export const TILE_RESOURCE_LABEL: Record<string, string> = {
-  WOOD: 'Wood',
-  BRICK: 'Brick',
-  SHEEP: 'Sheep',
-  WHEAT: 'Wheat',
-  ORE: 'Ore',
-};
-
-export const TILE_RESOURCE_EMOJI: Record<string, string> = {
-  WOOD: '🌲',
-  BRICK: '🔶',
-  SHEEP: '🐑',
-  WHEAT: '🌾',
-  ORE: '⛰️',
-};
-
-// Number token dot counts (for significance)
-export const HIGH_PROBABILITY_NUMBERS = new Set([6, 8]);
-export const MED_PROBABILITY_NUMBERS = new Set([5, 9]);
-
-// Game
-export const WIN_VP = 10;
-export const SETTLEMENT_VP = 1;
-export const CITY_VP = 2;
-export const LONGEST_ROAD_VP = 2;
-export const LARGEST_ARMY_VP = 2;
 
 // Poll settings
 export const POLL_INTERVAL_MS = 500;

@@ -1,7 +1,6 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import clsx from 'clsx';
 import { useGameStore } from '@/store/gameStore';
 import { useUiStore } from '@/store/uiStore';
 import { useGameLoop } from '@/shared/hooks/useGameLoop';
@@ -12,49 +11,47 @@ import ActionPanel from '@/features/action-panel/ActionPanel';
 import GameLog from '@/features/game-log/GameLog';
 import AnalysisPanel from '@/features/analysis-panel/AnalysisPanel';
 import ReplayControls from '@/features/replay-controls/ReplayControls';
-import { PLAYER_COLORS } from '@/shared/constants';
-import type { PlayableAction, PlayerColor } from '@/shared/types/game';
+import { ResourceHand } from '@/features/resource-hand/ResourceHand';
+import { BankPanel } from '@/features/bank/BankPanel';
+import { TradeModal } from '@/features/trade/TradeModal';
+import { FlyLayer, flyResource } from '@/shared/components/FlyLayer';
+import { PLAYER_COLORS, RESOURCE_ORDER } from '@/shared/constants';
+import type { PlayableAction, PlayerColor, DevCardType, ResourceCounts } from '@/shared/types/game';
 
 export default function GamePage() {
   const navigate = useNavigate();
-  const gameId = useGameStore(s => s.gameId);
-  const gameState = useGameStore(s => s.gameState);
+  const gameId             = useGameStore(s => s.gameId);
+  const gameState          = useGameStore(s => s.gameState);
   const humanPlayerIndices = useGameStore(s => s.humanPlayerIndices);
-  const autoPlaying = useGameStore(s => s.autoPlaying);
-  const thinking = useGameStore(s => s.thinking);
-  const replayMode = useGameStore(s => s.replayMode);
-  const lastRollDice = useGameStore(s => s.lastRollDice);
-  const setHumanPlayers = useGameStore(s => s.setHumanPlayers);
+  const autoPlaying        = useGameStore(s => s.autoPlaying);
+  const thinking           = useGameStore(s => s.thinking);
+  const replayMode         = useGameStore(s => s.replayMode);
+  const resourceGains      = useGameStore(s => s.resourceGains);
+  const perspectiveColor   = useGameStore(s => s.perspectiveColor);
+  const setHumanPlayers    = useGameStore(s => s.setHumanPlayers);
   const setPerspectiveColor = useGameStore(s => s.setPerspectiveColor);
-  const reset = useGameStore(s => s.reset);
+  const reset              = useGameStore(s => s.reset);
 
-  const sidebarTab = useUiStore(s => s.sidebarTab);
-  const setSidebarTab = useUiStore(s => s.setSidebarTab);
+  const sidebarTab      = useUiStore(s => s.sidebarTab);
+  const setSidebarTab   = useUiStore(s => s.setSidebarTab);
+  const showTradeModal  = useUiStore(s => s.showTradeModal);
+  const setShowTradeModal = useUiStore(s => s.setShowTradeModal);
 
   const {
-    refreshState,
-    evaluatePosition,
-    doAiMove,
-    submitAction,
-    autoAdvanceAI,
-    startAutoPlay,
-    stopAutoPlay,
-    isCurrentPlayerHuman,
-    enterReplay,
-    exitReplay,
-    cleanup,
+    refreshState, evaluatePosition,
+    submitAction, autoAdvanceAI, startAutoPlay, stopAutoPlay,
+    isCurrentPlayerHuman, enterReplay, exitReplay, cleanup,
   } = useGameLoop();
 
   const initialized = useRef(false);
+  const prevGains   = useRef(resourceGains);
 
-  // Redirect if no game
+  // ---- redirect if no game ------------------------------------------------
   useEffect(() => {
-    if (!gameId) {
-      navigate('/');
-    }
+    if (!gameId) navigate('/');
   }, [gameId, navigate]);
 
-  // Initialize: load state then start AI if needed
+  // ---- initialise game on mount -------------------------------------------
   useEffect(() => {
     if (!gameId || initialized.current) return;
     initialized.current = true;
@@ -64,19 +61,15 @@ export default function GamePage() {
       const state = useGameStore.getState().gameState;
       if (!state) return;
 
-      // Resolve human player indices from the server's game state.
-      // The server decides actual player order — never assume index 0 is human.
       const humanIndices = state.players
         .map((p, i) => (p.agent_id === 'human' ? i : -1))
         .filter(i => i >= 0);
       setHumanPlayers(humanIndices);
 
       if (humanIndices.length > 0) {
-        const humanColor = state.players[humanIndices[0]].color;
-        setPerspectiveColor(humanColor);
+        setPerspectiveColor(state.players[humanIndices[0]].color);
       }
 
-      // Now decide what to do first
       const isHuman = humanIndices.includes(state.current_player_index);
       if (humanIndices.length === 0) {
         startAutoPlay();
@@ -86,16 +79,78 @@ export default function GamePage() {
         autoAdvanceAI();
       }
     });
-  }, [gameId]);
+  }, [gameId]); // eslint-disable-line
 
-  // Cleanup on unmount
+  // ---- fly animations when resource gains arrive --------------------------
   useEffect(() => {
-    return () => {
-      // Don't delete game on unmount in case user navigates back
+    if (!resourceGains || resourceGains === prevGains.current) return;
+    prevGains.current = resourceGains;
+
+    // Fly cards only when the human player gains resources (whoever rolled).
+    // resourceGains is keyed by player COLOR — match against the human's color.
+    const humanColors = new Set<string>(
+      humanPlayerIndices
+        .map(idx => useGameStore.getState().gameState?.players[idx]?.color as string | undefined)
+        .filter((c): c is string => !!c)
+    );
+    Object.entries(resourceGains).forEach(([color, gains]) => {
+      if (!gains || !humanColors.has(color)) return;
+      (Object.entries(gains) as [string, number][]).forEach(([res, count], i) => {
+        if (count <= 0) return;
+        setTimeout(() => flyResource(res, 'gain', Math.min(count, 6)), i * 60);
+      });
+    });
+  }, [resourceGains, humanPlayerIndices]);
+
+  // ---- derived -------------------------------------------------------
+  const isHumanTurn = isCurrentPlayerHuman();
+  const isDisabled  = !isHumanTurn || replayMode ||
+    thinking.phase === 'thinking' || thinking.phase === 'submitting';
+
+  const currentPlayer  = gameState?.players[gameState.current_player_index];
+  const currentColor   = currentPlayer?.color as PlayerColor | undefined;
+
+  // Human player's data for the hand display
+  const humanPlayer = humanPlayerIndices.length > 0
+    ? gameState?.players[humanPlayerIndices[0]]
+    : null;
+
+  // Resources to highlight when hovering a build button
+  // (ActionPanel passes buildCost via internal state; ResourceHand just shows counts for now)
+
+  // Bank resources
+  const bankResources = (gameState?.bank_resources ?? {}) as ResourceCounts;
+
+  // Maritime trade actions available to human
+  const maritimeActions = useMemo(() =>
+    (gameState?.playable_actions ?? []).filter(a => a.action_type === 'MARITIME_TRADE'),
+    [gameState?.playable_actions]);
+
+  const canTrade = maritimeActions.length > 0 && isHumanTurn && !isDisabled;
+
+  // Dev card play handler (dispatched from ResourceHand dev stacks)
+  const handlePlayDev = useCallback((type: DevCardType) => {
+    const actionMap: Record<DevCardType, PlayableAction['action_type'] | null> = {
+      knight:         'PLAY_KNIGHT_CARD',
+      road_building:  'PLAY_ROAD_BUILDING',
+      year_of_plenty: 'PLAY_YEAR_OF_PLENTY',
+      monopoly:       'PLAY_MONOPOLY',
+      victory_point:  null,
     };
-  }, []);
+    const actionType = actionMap[type];
+    if (actionType) submitAction({ action_type: actionType, value: null });
+  }, [submitAction]);
 
   const handleAction = useCallback(async (action: PlayableAction) => {
+    // Trigger fly-out animation for spend actions
+    if (action.action_type === 'MARITIME_TRADE' && Array.isArray(action.value)) {
+      const val = action.value as (number | null)[];
+      const giving = val.slice(0, -1).filter((v): v is number => v !== null);
+      if (giving.length > 0) {
+        const res = RESOURCE_ORDER[giving[0]];
+        if (res) flyResource(res, 'spend', giving.length);
+      }
+    }
     await submitAction(action);
   }, [submitAction]);
 
@@ -107,277 +162,293 @@ export default function GamePage() {
     navigate('/');
   }, [stopAutoPlay, cleanup, reset, navigate]);
 
-  const isHumanTurn = isCurrentPlayerHuman();
-  const isDisabled = !isHumanTurn || replayMode || thinking.phase === 'thinking' || thinking.phase === 'submitting';
-
-  const currentPlayer = gameState?.players[gameState.current_player_index];
-  const currentColor = currentPlayer?.color as PlayerColor | undefined;
-
   if (!gameId) return null;
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 overflow-hidden">
-      {/* Top bar */}
-      <div className="flex-shrink-0 flex items-center gap-3 px-4 py-2 bg-slate-900/90 border-b border-slate-800/60 backdrop-blur-sm z-10">
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', fontFamily: 'var(--ff-ui)' }}>
+      {/* Flying cards layer — must be above everything */}
+      <FlyLayer />
+
+      {/* Atmospheric tint — sits above the canvas water */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse 120% 80% at 50% 0%, rgba(16,36,64,0.45) 0%, transparent 60%)',
+      }} />
+
+      {/* Edge vignette over board */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
+        background: 'radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(6,11,21,0.5) 100%), linear-gradient(180deg, rgba(6,11,21,0.55) 0%, transparent 16%, transparent 68%, rgba(6,11,21,0.65) 100%)',
+      }} />
+
+      {/* ---- top bar ---------------------------------------------------- */}
+      <div className="panel" style={{
+        position: 'absolute', top: 14, left: 14, right: 372, zIndex: 10,
+        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
+        borderRadius: 14,
+      }}>
         {/* Logo */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-lg">🎲</span>
-          <span className="font-bold text-white text-sm hidden sm:block">Hexbandit</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="4.5" fill="#eef3fb"/>
+            <circle cx="8" cy="8" r="1.5" fill="#0e2244"/>
+            <circle cx="16" cy="16" r="1.5" fill="#0e2244"/>
+            <circle cx="12" cy="12" r="1.5" fill="var(--p-red)"/>
+          </svg>
+          <span style={{ fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 17, letterSpacing: '0.05em', color: 'var(--text)' }}>
+            HEXBANDIT
+          </span>
         </div>
 
-        <div className="w-px h-5 bg-slate-700 hidden sm:block" />
+        <span style={{ width: 1, height: 20, background: 'var(--hairline)', flexShrink: 0 }} />
 
-        {/* Game info */}
+        {/* Turn / phase */}
         {gameState && (
-          <div className="flex items-center gap-3 text-xs text-slate-400 flex-shrink-0">
-            <span>Turn {gameState.num_turns}</span>
-            <span className="text-slate-600">·</span>
-            <span
-              className="font-semibold"
-              style={{ color: currentColor ? PLAYER_COLORS[currentColor] : '#94a3b8' }}
-            >
-              {currentColor}'s turn
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-dim)' }}>
+              Turn <span style={{ color: 'var(--text)' }}>{gameState.num_turns}</span>
             </span>
-            <span className="text-slate-600 hidden md:block">·</span>
-            <span className="hidden md:block">{formatPhase(gameState.game_phase)}</span>
+            {currentColor && (
+              <>
+                <span style={{ fontSize: 12, color: 'var(--text-ghost)' }}>·</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: PLAYER_COLORS[currentColor] }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: PLAYER_COLORS[currentColor], boxShadow: `0 0 8px ${PLAYER_COLORS[currentColor]}` }} />
+                  {currentColor}'s turn
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--text-ghost)', display: 'none' }} className="md:inline">·</span>
+                <span style={{ fontSize: 12, color: 'var(--text-faint)', display: 'none' }} className="md:inline">
+                  {formatPhase(gameState.game_phase)}
+                </span>
+              </>
+            )}
           </div>
         )}
 
-        {/* Dice display */}
-        {lastRollDice && (
-          <div className="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 flex-shrink-0">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-white text-slate-900 font-bold text-xs shadow">
-              {lastRollDice[0]}
-            </span>
-            <span className="text-slate-500 text-xs">+</span>
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-white text-slate-900 font-bold text-xs shadow">
-              {lastRollDice[1]}
-            </span>
-            <span className="text-slate-400 text-xs font-semibold ml-0.5">={lastRollDice[0] + lastRollDice[1]}</span>
-          </div>
-        )}
+        <span style={{ width: 1, height: 20, background: 'var(--hairline)', flexShrink: 0 }} />
 
-        {/* Eval bar — compact in header */}
-        <div className="flex-1 hidden lg:block max-w-xs">
-          <EvalBar compact />
-        </div>
+        {/* Win probability bar */}
+        <EvalBar compact />
 
-        {/* Thinking badge */}
-        <AnimatePresence>
-          {(thinking.phase === 'thinking' || thinking.phase === 'submitting') && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="flex items-center gap-2 bg-slate-800 border border-slate-600/50 rounded-full px-3 py-1"
-            >
-              <span className="thinking-pulse text-sm">🧠</span>
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-300">{thinking.message}</span>
-                  <span className="text-xs text-slate-500">{Math.round(thinking.progress)}%</span>
-                </div>
-                <div className="h-0.5 w-24 bg-slate-700 rounded-full">
-                  <motion.div
-                    className="h-full bg-blue-400 rounded-full"
-                    animate={{ width: `${thinking.progress}%` }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
-        <div className="ml-auto flex items-center gap-2">
-          {/* Auto-play toggle */}
+        {/* Right controls */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7 }}>
           {humanPlayerIndices.length === 0 && !replayMode && (
             <button
               onClick={autoPlaying ? stopAutoPlay : startAutoPlay}
-              className={clsx(
-                'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
-                autoPlaying
-                  ? 'bg-amber-700/50 border-amber-600/50 text-amber-300'
-                  : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700',
-              )}
+              className="btn"
+              style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700 }}
             >
               {autoPlaying ? '⏸ Stop' : '⏵ Auto'}
             </button>
           )}
 
-          {/* Manual AI move for non-auto games */}
-          {!isHumanTurn && !autoPlaying && !replayMode && !gameState?.winner && (
-            <button
-              onClick={doAiMove}
-              disabled={thinking.phase !== 'idle'}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all disabled:opacity-40"
-            >
-              🤖 AI Move
-            </button>
-          )}
 
-          {/* Replay button */}
           {gameState?.winner && !replayMode && (
-            <button
-              onClick={enterReplay}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-purple-600/50 bg-purple-900/30 text-purple-300 hover:bg-purple-900/50 transition-all"
-            >
+            <button onClick={enterReplay} className="btn" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5' }}>
               📼 Replay
             </button>
           )}
 
           {replayMode && (
-            <button
-              onClick={exitReplay}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all"
-            >
+            <button onClick={exitReplay} className="btn" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700 }}>
               ✕ Exit Replay
             </button>
           )}
 
-          {/* New game */}
-          <button
-            onClick={handleNewGame}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all"
-          >
+          <button onClick={handleNewGame} className="btn" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700 }}>
             New Game
           </button>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Board area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Board */}
-          <div className="flex-1 min-h-0 relative">
-            {!gameState ? (
-              <div className="flex items-center justify-center h-full text-slate-500">
-                <div className="text-center space-y-2">
-                  <div className="w-8 h-8 border-2 border-slate-600 border-t-blue-400 rounded-full animate-spin mx-auto" />
-                  <div className="text-sm">Loading game…</div>
-                </div>
-              </div>
-            ) : (
-              <GameBoard3D onAction={handleAction} disabled={isDisabled} />
-            )}
-
-            {/* Winner overlay */}
-            <AnimatePresence>
-              {gameState?.winner && !replayMode && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-                >
-                  <motion.div
-                    initial={{ scale: 0.8, y: 20 }}
-                    animate={{ scale: 1, y: 0 }}
-                    className="text-center bg-slate-900/95 border border-slate-700 rounded-2xl px-8 py-6 shadow-2xl"
-                  >
-                    <div className="text-5xl mb-3">🏆</div>
-                    <div
-                      className="text-2xl font-bold mb-1"
-                      style={{ color: PLAYER_COLORS[gameState.winner as PlayerColor] || '#fff' }}
-                    >
-                      {gameState.winner} Wins!
-                    </div>
-                    <p className="text-slate-400 text-sm mb-4">Game over</p>
-                    <div className="flex gap-3 justify-center">
-                      <button
-                        onClick={enterReplay}
-                        className="px-4 py-2 rounded-xl text-sm bg-purple-700 hover:bg-purple-600 text-white font-medium transition-all"
-                      >
-                        📼 Watch Replay
-                      </button>
-                      <button
-                        onClick={handleNewGame}
-                        className="px-4 py-2 rounded-xl text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium transition-all"
-                      >
-                        New Game
-                      </button>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Bottom: eval bar (on small screens) + action panel */}
-          <div className="flex-shrink-0 border-t border-slate-800/60 bg-slate-900/70 backdrop-blur-sm">
-            {/* Eval bar */}
-            <div className="lg:hidden border-b border-slate-800/40 px-3 py-1">
-              <EvalBar compact />
+      {/* ---- board — full-screen canvas, camera offset keeps board in left zone */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
+        {!gameState ? (
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, border: '2.5px solid var(--glass-brd2)', borderTop: '2.5px solid var(--sapphire-bright)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>Loading game…</div>
             </div>
-
-            {/* Actions */}
-            {!replayMode ? (
-              <ActionPanel onAction={handleAction} disabled={isDisabled} />
-            ) : (
-              <div className="p-3">
-                <ReplayControls />
-              </div>
-            )}
           </div>
-        </div>
-
-        {/* Right sidebar */}
-        <div className="flex-shrink-0 w-72 xl:w-80 flex flex-col border-l border-slate-800/60 bg-slate-900/50 overflow-hidden">
-          {/* Sidebar tabs */}
-          <div className="flex-shrink-0 flex border-b border-slate-800/60">
-            {(['players', 'log', 'analysis'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setSidebarTab(tab)}
-                className={clsx(
-                  'flex-1 py-2 text-xs font-medium capitalize transition-all border-b-2',
-                  sidebarTab === tab
-                    ? 'border-blue-500 text-blue-400 bg-slate-800/30'
-                    : 'border-transparent text-slate-500 hover:text-slate-400',
-                )}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {/* Sidebar content */}
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {sidebarTab === 'players' && (
-              <div className="p-3">
-                <PlayerPanel />
-              </div>
-            )}
-            {sidebarTab === 'log' && (
-              <div className="h-full">
-                <GameLog />
-              </div>
-            )}
-            {sidebarTab === 'analysis' && (
-              <div className="p-3">
-                <AnalysisPanel />
-                {!replayMode && (
-                  <div className="text-xs text-slate-600 text-center mt-4">
-                    Analysis available in replay mode
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        ) : (
+          <GameBoard3D onAction={handleAction} disabled={isDisabled} />
+        )}
       </div>
+
+      {/* ---- bottom-left command zone ------------------------------------ */}
+      {gameState && (
+        <div style={{
+          position: 'absolute', left: 14, bottom: 20, zIndex: 12,
+          display: 'flex', alignItems: 'flex-end', gap: 20,
+          pointerEvents: 'none',
+        }}>
+          {/* Left: action panel (dice + build) */}
+          {!replayMode ? (
+            <ActionPanel onAction={handleAction} disabled={isDisabled} />
+          ) : (
+            <div className="panel" style={{ padding: 12, pointerEvents: 'auto' }}>
+              <ReplayControls />
+            </div>
+          )}
+
+          {/* Centre: resource hand + dev stacks (human player only) */}
+          {humanPlayer && !replayMode && (
+            <div style={{ pointerEvents: 'auto' }}>
+              <ResourceHand
+                resources={humanPlayer.resources}
+                devCards={humanPlayer.dev_cards_private}
+                isMyTurn={isHumanTurn && !isDisabled}
+                onPlayDev={handlePlayDev}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ---- right sidebar ----------------------------------------------- */}
+      <div className="panel" style={{
+        position: 'absolute', top: 14, right: 14, bottom: 14, width: 344, zIndex: 10,
+        display: 'flex', flexDirection: 'column', padding: 16, gap: 14,
+        overflow: 'hidden',
+      }}>
+        {/* Tab bar */}
+        <div style={{
+          flexShrink: 0, display: 'flex', borderRadius: 10, overflow: 'hidden',
+          background: 'var(--bg-1)', border: '1px solid var(--hairline)',
+        }}>
+          {(['players', 'log', 'analysis'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setSidebarTab(tab)}
+              style={{
+                flex: 1, padding: '8px 0', fontSize: 11, fontWeight: 700,
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                background: sidebarTab === tab ? 'var(--glass-hi)' : 'transparent',
+                color: sidebarTab === tab ? 'var(--text)' : 'var(--text-faint)',
+                border: 'none', borderBottom: `2px solid ${sidebarTab === tab ? 'var(--sapphire-bright)' : 'transparent'}`,
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {sidebarTab === 'players' && (
+            <>
+              <PlayerPanel />
+              <div style={{ height: 1, background: 'var(--hairline)', flexShrink: 0 }} />
+              <BankPanel
+                bank={bankResources}
+                canTrade={canTrade}
+                onTrade={() => setShowTradeModal(true)}
+              />
+            </>
+          )}
+
+          {sidebarTab === 'log' && (
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <GameLog />
+            </div>
+          )}
+
+          {sidebarTab === 'analysis' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <AnalysisPanel />
+              {!replayMode && (
+                <div style={{ fontSize: 11.5, color: 'var(--text-ghost)', textAlign: 'center' }}>
+                  Full analysis available in replay mode
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Perspective indicator at bottom */}
+        {perspectiveColor && (
+          <div style={{
+            flexShrink: 0, display: 'flex', alignItems: 'center', gap: 7,
+            padding: '8px 2px 0', borderTop: '1px solid var(--hairline)',
+          }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: PLAYER_COLORS[perspectiveColor as PlayerColor] || '#ccc',
+              boxShadow: `0 0 8px ${PLAYER_COLORS[perspectiveColor as PlayerColor] || '#ccc'}`,
+            }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)' }}>
+              Playing as {perspectiveColor}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ---- winner overlay ---------------------------------------------- */}
+      <AnimatePresence>
+        {gameState?.winner && !replayMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 50,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(4,8,16,0.55)', backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.88, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="panel"
+              style={{
+                textAlign: 'center', padding: '32px 40px',
+                background: 'var(--glass-2)', boxShadow: 'var(--sh-pop)',
+                borderRadius: 'var(--r-xl)',
+              }}
+            >
+              <div style={{ fontSize: 52, marginBottom: 10 }}>🏆</div>
+              <div style={{
+                fontFamily: 'var(--ff-display)', fontSize: 26, fontWeight: 700, marginBottom: 4,
+                color: PLAYER_COLORS[gameState.winner as PlayerColor] || 'var(--text)',
+              }}>
+                {gameState.winner} Wins!
+              </div>
+              <p style={{ color: 'var(--text-faint)', fontSize: 13, marginBottom: 20 }}>Game over</p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={enterReplay} className="btn" style={{ padding: '11px 22px', fontSize: 13.5, fontWeight: 800, borderColor: 'rgba(160,130,235,0.5)', color: '#c4b5f5' }}>
+                  📼 Watch Replay
+                </button>
+                <button onClick={handleNewGame} className="btn btn-primary" style={{ padding: '11px 22px', fontSize: 13.5, fontWeight: 800 }}>
+                  New Game
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ---- trade modal ------------------------------------------------- */}
+      {showTradeModal && gameState && (
+        <TradeModal
+          hand={humanPlayer?.resources ?? {} as ResourceCounts}
+          bank={bankResources}
+          maritimeActions={maritimeActions}
+          onConfirm={handleAction}
+          onClose={() => setShowTradeModal(false)}
+        />
+      )}
     </div>
   );
 }
 
 function formatPhase(phase: string): string {
   const labels: Record<string, string> = {
-    INITIAL_BUILD: 'Setup',
-    PLAY_TURN: 'Playing',
-    DISCARDING: 'Discarding',
-    MOVING_ROBBER: 'Moving Robber',
-    ROAD_BUILDING: 'Road Building',
+    INITIAL_BUILD:   'Setup',
+    PLAY_TURN:       'Playing',
+    DISCARDING:      'Discarding',
+    MOVING_ROBBER:   'Moving Robber',
+    ROAD_BUILDING:   'Road Building',
     RESOLVING_TRADE: 'Trade',
     DECIDE_ACCEPTEES: 'Confirm Trade',
   };

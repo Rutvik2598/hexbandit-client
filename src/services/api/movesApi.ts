@@ -28,7 +28,7 @@ export async function pollRequest(requestId: string): Promise<MoveRequestRespons
   return api.get<MoveRequestResponse>(`/moves/${requestId}`);
 }
 
-export async function cancelRequest(requestId: string): Promise<void> {
+async function cancelRequest(requestId: string): Promise<void> {
   await api.delete(`/moves/${requestId}`);
 }
 

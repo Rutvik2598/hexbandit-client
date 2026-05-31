@@ -35,7 +35,9 @@ function processActionLog(
 
     const html = formatActionLogEvent(event, players);
     if (html !== null) {
-      addLog(html, 'action', true);
+      // Prefix with raw color key so GameLog can resolve the dot color without
+      // trying to parse the player-name HTML span.
+      addLog(`${event.color}|${html}`, 'action', true);
     }
   }
 
@@ -143,29 +145,21 @@ export function useGameLoop() {
     if (!gameId || aiInFlight.current) return false;
 
     // Primary guard: always read fresh store — never run during human turn
-    if (isCurrentPlayerHumanNow()) {
-      addLog('doAiMove: current player is human, skipping', 'info');
-      return false;
-    }
+    if (isCurrentPlayerHumanNow()) return false;
 
     const currentState = useGameStore.getState().gameState;
     if (!currentState) return false;
 
     const agentId = currentState.current_player_agent_id;
-    addLog(`AI turn: player=${currentState.current_player_index} agent=${agentId} phase=${currentState.game_phase}`, 'info');
 
     // Secondary guard: if server explicitly marks player as human
-    if (agentId === 'human') {
-      addLog('doAiMove: agent_id is human, skipping', 'info');
-      return false;
-    }
+    if (agentId === 'human') return false;
 
     aiInFlight.current = true;
     try {
       setThinking({ phase: 'submitting', message: 'Requesting move…', progress: 0 });
 
       const submitResult = await requestMove({ game_id: gameId });
-      addLog(`Move request submitted: ${submitResult.request_id}`, 'info');
 
       const pollResult = await pollUntilComplete(submitResult.request_id, {
         onProgress: (progress, message) => {
@@ -184,8 +178,6 @@ export function useGameLoop() {
         clearThinking();
         return false;
       }
-
-      addLog(`AI move done: ${pollResult.result.action_type}`, 'info');
 
       clearThinking();
       const ok = await refreshState();
@@ -228,9 +220,7 @@ export function useGameLoop() {
         evaluatePosition();
       }
 
-      // Auto-advance AI — use store read to avoid stale closure after refreshState
       const nowHuman = isCurrentPlayerHumanNow();
-      addLog(`After move: player=${useGameStore.getState().gameState?.current_player_index} human=${nowHuman}`, 'info');
       if (!nowHuman && !autoPlaying) {
         autoAdvanceAI();
       }
@@ -245,7 +235,6 @@ export function useGameLoop() {
 
   const autoAdvanceAI = useCallback(async () => {
     const runId = ++autoAdvanceRunId.current;
-    addLog('autoAdvanceAI started', 'info');
     while (
       gameId &&
       !useGameStore.getState().gameState?.winner &&
@@ -257,8 +246,7 @@ export function useGameLoop() {
       if (!ok) break;
       await new Promise(r => setTimeout(r, 300));
     }
-    addLog('autoAdvanceAI finished', 'info');
-  }, [gameId, doAiMove, addLog]);
+  }, [gameId, doAiMove]);
 
   const startAutoPlay = useCallback(async () => {
     setAutoPlaying(true);
@@ -275,7 +263,6 @@ export function useGameLoop() {
       }
       if (isCurrentPlayerHuman()) {
         setAutoPlaying(false);
-        addLog('Your turn! Auto-play paused.', 'info');
         break;
       }
       const ok = await doAiMove();

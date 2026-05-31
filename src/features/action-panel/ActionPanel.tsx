@@ -1,137 +1,181 @@
-import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import clsx from 'clsx';
+/**
+ * ActionPanel — the bottom-left command zone that floats over the board.
+ *
+ * Layout:
+ *   Left column (fixed 190px): DiceTray + Roll/EndTurn button + Build buttons
+ *   (Resource hand is rendered separately in the centre by GamePage)
+ *
+ * Special phases (discard, move robber, trade response) render an overlay
+ * panel instead of the normal build column.
+ */
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useInteractionStore } from '@/store/interactionStore';
+import { DiceTray } from '@/features/dice/DiceTray';
+import { ResourceIcon } from '@/shared/components/ResourceIcon';
+import { Icon } from '@/shared/components/Icon';
 import {
-  RESOURCE_EMOJI,
   RESOURCE_ORDER,
   RESOURCE_LABELS,
 } from '@/shared/constants';
 import type { PlayableAction, ResourceType } from '@/shared/types/game';
 
-interface ActionPanelProps {
-  onAction: (action: PlayableAction) => void;
-  disabled?: boolean;
+// ---- build cost catalogue -----------------------------------------------
+
+const BUILD_COSTS: Record<string, Partial<Record<ResourceType, number>>> = {
+  road:       { wood: 1, brick: 1 },
+  settlement: { wood: 1, brick: 1, sheep: 1, wheat: 1 },
+  city:       { wheat: 2, ore: 3 },
+  devcard:    { sheep: 1, wheat: 1, ore: 1 },
+};
+
+
+function canAfford(resources: Record<string, number>, cost: Partial<Record<string, number>>) {
+  return Object.entries(cost).every(([k, v]) => (resources[k] ?? 0) >= (v ?? 0));
 }
 
-function ActionButton({
-  label,
-  emoji,
-  onClick,
-  disabled,
-  variant = 'default',
-  active,
-  title,
-}: {
+// ---- sub-components -------------------------------------------------------
+
+interface BuildButtonProps {
   label: string;
-  emoji?: string;
-  onClick: () => void;
-  disabled?: boolean;
-  variant?: 'default' | 'primary' | 'danger' | 'success' | 'ghost';
+  iconName: 'road' | 'settlement' | 'city' | 'devcard';
+  cost: Partial<Record<ResourceType, number>>;
+  resources: Record<string, number>;
+  rolled: boolean;
+  isMyTurn: boolean;
   active?: boolean;
-  title?: string;
-}) {
-  const variantClasses = {
-    default: 'bg-slate-700 hover:bg-slate-600 text-slate-200 border-slate-600',
-    primary: 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500',
-    danger: 'bg-red-700 hover:bg-red-600 text-white border-red-600',
-    success: 'bg-green-700 hover:bg-green-600 text-white border-green-600',
-    ghost: 'bg-transparent hover:bg-slate-700 text-slate-300 border-slate-700',
-  };
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, active, disabled, onClick }: BuildButtonProps) {
+  const [hover, setHover] = useState(false);
+  const afford = canAfford(resources, cost);
+  const ready  = afford && rolled && isMyTurn && !disabled;
+
+  const bg = hover && ready
+    ? 'var(--bg-3)'
+    : ready
+    ? 'var(--glass-2)'
+    : 'rgba(255,255,255,0.025)';
 
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={clsx(
-        'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium',
-        'transition-all duration-150 select-none',
-        'disabled:opacity-40 disabled:cursor-not-allowed',
-        variantClasses[variant],
-        active && 'ring-2 ring-blue-400 ring-offset-1 ring-offset-slate-900',
-      )}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={() => ready && onClick()}
+      disabled={!ready}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+        padding: '8px 10px', borderRadius: 11,
+        background: active ? 'var(--glass-hi)' : bg,
+        border: `1px solid ${active ? 'var(--sapphire-bright)' : ready ? 'var(--glass-brd2)' : 'var(--hairline)'}`,
+        color: afford ? 'var(--text)' : 'var(--text-faint)',
+        textAlign: 'left', cursor: ready ? 'pointer' : 'not-allowed',
+        transition: 'background 0.15s, border-color 0.15s, transform 0.12s',
+        transform: hover && ready ? 'translateY(-1px)' : 'none',
+        opacity: afford ? 1 : 0.6,
+        outline: active ? '2px solid var(--sapphire-bright)' : 'none',
+        outlineOffset: 1,
+      }}
     >
-      {emoji && <span>{emoji}</span>}
-      <span>{label}</span>
+      {/* icon box */}
+      <span style={{
+        width: 32, height: 32, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0,
+        background: afford ? 'color-mix(in srgb, var(--sapphire) 20%, transparent)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${afford ? 'var(--sapphire)' : 'var(--hairline)'}`,
+      }}>
+        <Icon name={iconName} size={16} color={afford ? 'var(--sapphire-bright)' : 'var(--text-faint)'} />
+      </span>
+
+      {/* label + cost chips */}
+      <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '0.01em' }}>{label}</span>
+        <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {Object.entries(cost).map(([k, v]) => {
+            const has = (resources[k] ?? 0) >= (v ?? 0);
+            return (
+              <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 2, opacity: has ? 1 : 0.5 }}>
+                <ResourceIcon type={k} size={12} shadow={false} />
+                <span style={{ fontSize: 10, fontWeight: 800, color: has ? 'var(--text-dim)' : 'var(--p-red)' }}>{v}</span>
+              </span>
+            );
+          })}
+        </span>
+      </span>
+
+      {/* ready dot */}
+      {ready && (
+        <span style={{
+          width: 7, height: 7, borderRadius: '50%',
+          background: 'var(--amber)', boxShadow: '0 0 8px var(--amber-glow)', flexShrink: 0,
+        }} />
+      )}
     </button>
   );
 }
 
-function DiscardPanel({ onAction, disabled }: ActionPanelProps) {
+// ---- DiscardPanel --------------------------------------------------------
+
+function DiscardPanel({ onAction, disabled }: { onAction: (a: PlayableAction) => void; disabled?: boolean }) {
   const gameState = useGameStore(s => s.gameState);
   const [selected, setSelected] = useState<Partial<Record<ResourceType, number>>>({});
 
-  const currentPlayer = gameState?.players[gameState.current_player_index];
-  if (!currentPlayer) return null;
+  const player = gameState?.players[gameState.current_player_index];
+  if (!player) return null;
 
-  const totalHand = Object.values(currentPlayer.resources).reduce((a, b) => a + b, 0);
-  const required = Math.floor(totalHand / 2);
-  const totalSelected = Object.values(selected).reduce((a, b) => a + b, 0);
-  const remaining = required - totalSelected;
+  const total    = Object.values(player.resources).reduce((a, b) => a + b, 0);
+  const required = Math.floor(total / 2);
+  const chosen   = Object.values(selected).reduce((a, b) => a + b, 0);
+  const remaining = required - chosen;
 
-  const handleIncrement = (res: ResourceType) => {
-    const current = selected[res] || 0;
-    const inHand = currentPlayer.resources[res];
-    if (current < inHand) {
-      setSelected(s => ({ ...s, [res]: current + 1 }));
+  const inc = (res: ResourceType) => {
+    if ((selected[res] ?? 0) < player.resources[res] && chosen < required) {
+      setSelected(s => ({ ...s, [res]: (s[res] ?? 0) + 1 }));
     }
   };
-
-  const handleDecrement = (res: ResourceType) => {
-    const current = selected[res] || 0;
-    if (current > 0) {
-      setSelected(s => ({ ...s, [res]: current - 1 }));
+  const dec = (res: ResourceType) => {
+    if ((selected[res] ?? 0) > 0) {
+      setSelected(s => ({ ...s, [res]: (s[res] ?? 0) - 1 }));
     }
-  };
-
-  const handleSubmit = () => {
-    const value = RESOURCE_ORDER.map(res => selected[res] || 0);
-    onAction({ action_type: 'DISCARD', value });
   };
 
   return (
-    <div className="p-3 bg-red-950/30 border border-red-800/30 rounded-xl space-y-3">
-      <div className="text-sm text-red-300 font-semibold">
-        Discard {required} cards ({remaining} more to select)
+    <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--p-red)' }}>
+        Discard {required} cards {remaining > 0 ? `(${remaining} more)` : '✓'}
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
         {RESOURCE_ORDER.map(res => {
-          const inHand = currentPlayer.resources[res];
-          const count = selected[res] || 0;
+          const inHand = player.resources[res];
+          const count  = selected[res] ?? 0;
           if (inHand === 0) return null;
           return (
-            <div key={res} className="flex items-center justify-between bg-slate-800/60 rounded-lg px-2 py-1.5">
-              <div className="flex items-center gap-1 text-xs">
-                <span>{RESOURCE_EMOJI[res]}</span>
-                <span className="text-slate-300">{count}/{inHand}</span>
+            <div key={res} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '5px 8px',
+              border: '1px solid var(--hairline)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <ResourceIcon type={res} size={14} shadow={false} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)' }}>{count}/{inHand}</span>
               </div>
-              <div className="flex items-center gap-0.5">
-                <button
-                  onClick={() => handleDecrement(res)}
-                  disabled={count === 0}
-                  className="w-5 h-5 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs disabled:opacity-30"
-                >−</button>
-                <button
-                  onClick={() => handleIncrement(res)}
-                  disabled={count >= inHand || totalSelected >= required}
-                  className="w-5 h-5 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs disabled:opacity-30"
-                >+</button>
+              <div style={{ display: 'flex', gap: 3 }}>
+                <button onClick={() => dec(res)} disabled={count === 0}
+                  style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--glass-hi)', border: '1px solid var(--glass-brd)', color: 'var(--text)', fontSize: 13, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>−</button>
+                <button onClick={() => inc(res)} disabled={count >= inHand || chosen >= required}
+                  style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--glass-hi)', border: '1px solid var(--glass-brd)', color: 'var(--text)', fontSize: 13, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>+</button>
               </div>
             </div>
           );
         })}
       </div>
       <button
-        onClick={handleSubmit}
-        disabled={disabled || totalSelected !== required}
-        className={clsx(
-          'w-full py-2 rounded-lg text-sm font-semibold transition-all',
-          totalSelected === required
-            ? 'bg-red-600 hover:bg-red-500 text-white'
-            : 'bg-slate-700 text-slate-500 cursor-not-allowed',
-        )}
+        onClick={() => onAction({ action_type: 'DISCARD', value: RESOURCE_ORDER.map(r => selected[r] ?? 0) })}
+        disabled={disabled || chosen !== required}
+        className={`btn${chosen === required ? ' btn-primary' : ''}`}
+        style={{ padding: '10px 0', fontSize: 13, fontWeight: 800, width: '100%' }}
       >
         Discard {required} Cards
       </button>
@@ -139,63 +183,143 @@ function DiscardPanel({ onAction, disabled }: ActionPanelProps) {
   );
 }
 
-export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
-  const gameState = useGameStore(s => s.gameState);
-  const thinking = useGameStore(s => s.thinking);
-  const lastRollDice = useGameStore(s => s.lastRollDice);
-  const mode = useInteractionStore(s => s.mode);
-  const setMode = useInteractionStore(s => s.setMode);
+// ---- ResourcePicker (YoP / Monopoly) ------------------------------------
 
-  const playableActions = gameState?.playable_actions || [];
-  const phase = gameState?.game_phase;
+function ResourcePicker({
+  title, onPick, onCancel, disabled,
+}: { title: string; onPick: (r: ResourceType) => void; onCancel: () => void; disabled?: boolean }) {
+  return (
+    <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)' }}>{title}</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {RESOURCE_ORDER.map(res => (
+          <button key={res} onClick={() => !disabled && onPick(res)} disabled={disabled}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              padding: '8px 6px', borderRadius: 10, background: 'rgba(255,255,255,0.04)',
+              border: '1px solid var(--glass-brd)', cursor: 'pointer', minWidth: 44,
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => { if (!disabled) (e.currentTarget as HTMLElement).style.background = 'var(--glass-hi)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
+          >
+            <ResourceIcon type={res} size={22} shadow={false} />
+            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase' }}>
+              {RESOURCE_LABELS[res]}
+            </span>
+          </button>
+        ))}
+      </div>
+      <button onClick={onCancel} style={{ fontSize: 11, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer' }}>
+        Cancel
+      </button>
+    </div>
+  );
+}
 
-  // Categorize actions
-  const hasRoll = playableActions.some(a => a.action_type === 'ROLL');
-  const hasEndTurn = playableActions.some(a => a.action_type === 'END_TURN');
-  const hasBuildRoad = playableActions.some(a => a.action_type === 'BUILD_ROAD');
-  const hasBuildSettlement = playableActions.some(a => a.action_type === 'BUILD_SETTLEMENT');
-  const hasBuildCity = playableActions.some(a => a.action_type === 'BUILD_CITY');
-  const hasBuyDevCard = playableActions.some(a => a.action_type === 'BUY_DEVELOPMENT_CARD');
-  const hasPlayKnight = playableActions.some(a => a.action_type === 'PLAY_KNIGHT_CARD');
-  const hasPlayYop = playableActions.some(a => a.action_type === 'PLAY_YEAR_OF_PLENTY');
-  const hasPlayMonopoly = playableActions.some(a => a.action_type === 'PLAY_MONOPOLY');
-  const hasPlayRoadBuilding = playableActions.some(a => a.action_type === 'PLAY_ROAD_BUILDING');
-  const hasDiscard = phase === 'DISCARDING';
-  const hasMoveRobber = phase === 'MOVING_ROBBER';
-  const hasMaritime = playableActions.some(a => a.action_type === 'MARITIME_TRADE');
-  const hasAcceptTrade = playableActions.some(a => a.action_type === 'ACCEPT_TRADE');
-  const hasRejectTrade = playableActions.some(a => a.action_type === 'REJECT_TRADE');
-  const hasConfirmTrade = playableActions.some(a => a.action_type === 'CONFIRM_TRADE');
-  const hasCancelTrade = playableActions.some(a => a.action_type === 'CANCEL_TRADE');
+// ---- TradeResponse -------------------------------------------------------
 
-  // Auto-activate road mode when road is the only available action (initial build, road building card)
-  const roadIsForced = hasBuildRoad && !hasRoll && !hasBuildSettlement && !hasBuildCity && !hasEndTurn && !hasDiscard && !hasMoveRobber;
-  useEffect(() => {
-    if (roadIsForced && !disabled) {
-      setMode('BUILD_ROAD');
-    }
-  }, [roadIsForced, disabled, setMode]);
+function TradeResponse({ onAction, disabled, actions }: {
+  onAction: (a: PlayableAction) => void; disabled?: boolean; actions: PlayableAction[];
+  trade?: number[];
+}) {
+  const hasAccept  = actions.some(a => a.action_type === 'ACCEPT_TRADE');
+  const hasReject  = actions.some(a => a.action_type === 'REJECT_TRADE');
+  const hasConfirm = actions.some(a => a.action_type === 'CONFIRM_TRADE');
+  const hasCancel  = actions.some(a => a.action_type === 'CANCEL_TRADE');
 
-  // Thinking indicator
-  const isThinking = thinking.phase === 'thinking' || thinking.phase === 'submitting';
-
-  // Year of Plenty state
-  const [yopPick, setYopPick] = useState<ResourceType | null>(null);
-
-  const handleYop = (res: ResourceType) => {
-    if (!yopPick) {
-      setYopPick(res);
-    } else {
-      onAction({ action_type: 'PLAY_YEAR_OF_PLENTY', value: [RESOURCE_ORDER.indexOf(yopPick), RESOURCE_ORDER.indexOf(res)] });
-      setYopPick(null);
-    }
+  const act = (type: string) => {
+    const a = actions.find(x => x.action_type === type);
+    if (a) onAction(a);
   };
 
-  // Maritime trade state
-  const [marGiving, setMarGiving] = useState<ResourceType | null>(null);
+  return (
+    <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+        Trade Response
+      </div>
+      <div style={{ display: 'flex', gap: 7 }}>
+        {hasAccept  && <button onClick={() => act('ACCEPT_TRADE')}  disabled={disabled} className="btn btn-primary" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800 }}>✓ Accept</button>}
+        {hasReject  && <button onClick={() => act('REJECT_TRADE')}  disabled={disabled} className="btn" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800, borderColor: 'rgba(220,60,60,0.4)', color: '#f87171' }}>✗ Reject</button>}
+        {hasConfirm && <button onClick={() => act('CONFIRM_TRADE')} disabled={disabled} className="btn btn-amber" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800 }}>🤝 Confirm</button>}
+        {hasCancel  && <button onClick={() => act('CANCEL_TRADE')}  disabled={disabled} className="btn" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800 }}>✗ Cancel</button>}
+      </div>
+    </div>
+  );
+}
 
-  // Derive which resources the player can give, and at what rate, from playable actions.
-  // Each MARITIME_TRADE value is [...give_indices, receive_index].
+// ---- Main ActionPanel ----------------------------------------------------
+
+export interface ActionPanelProps {
+  onAction: (action: PlayableAction) => void;
+  disabled?: boolean;
+}
+
+export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
+  const gameState     = useGameStore(s => s.gameState);
+  const thinking      = useGameStore(s => s.thinking);
+  const lastRollDice  = useGameStore(s => s.lastRollDice);
+  const humanIndices  = useGameStore(s => s.humanPlayerIndices);
+  const mode          = useInteractionStore(s => s.mode);
+  const setMode       = useInteractionStore(s => s.setMode);
+
+  const [yopPick, setYopPick]     = useState<ResourceType | null>(null);
+  const [rollPending, setRollPending] = useState(false);
+  const [rollKey, setRollKey]     = useState(0);
+  const prevDice = useRef<typeof lastRollDice>(lastRollDice);
+
+  const playableActions = gameState?.playable_actions ?? [];
+  const phase = gameState?.game_phase;
+  const currentPlayer  = gameState?.players[gameState.current_player_index];
+  const resources      = currentPlayer?.resources ?? {};
+  const isHumanTurn    = humanIndices.includes(gameState?.current_player_index ?? -1);
+
+  const hasRoll       = playableActions.some(a => a.action_type === 'ROLL');
+  const hasEndTurn    = playableActions.some(a => a.action_type === 'END_TURN');
+  const hasBuildRoad  = playableActions.some(a => a.action_type === 'BUILD_ROAD');
+  const hasBuildSettlement = playableActions.some(a => a.action_type === 'BUILD_SETTLEMENT');
+  const hasBuildCity  = playableActions.some(a => a.action_type === 'BUILD_CITY');
+  const hasBuyDev     = playableActions.some(a => a.action_type === 'BUY_DEVELOPMENT_CARD');
+  const hasPlayKnight = playableActions.some(a => a.action_type === 'PLAY_KNIGHT_CARD');
+  const hasPlayYop    = playableActions.some(a => a.action_type === 'PLAY_YEAR_OF_PLENTY');
+  const hasPlayMono   = playableActions.some(a => a.action_type === 'PLAY_MONOPOLY');
+  const hasPlayRoadBuilding = playableActions.some(a => a.action_type === 'PLAY_ROAD_BUILDING');
+  const hasDiscard    = phase === 'DISCARDING';
+  const hasMoveRobber = phase === 'MOVING_ROBBER';
+  const hasTradeResponse = playableActions.some(a =>
+    a.action_type === 'ACCEPT_TRADE' || a.action_type === 'REJECT_TRADE' ||
+    a.action_type === 'CONFIRM_TRADE' || a.action_type === 'CANCEL_TRADE');
+
+  const rolled = !hasRoll && !!lastRollDice;
+
+  // Auto-activate road mode when it's the only action
+  const roadIsForced = hasBuildRoad && !hasRoll && !hasBuildSettlement && !hasBuildCity && !hasEndTurn && !hasDiscard && !hasMoveRobber;
+  useEffect(() => {
+    if (roadIsForced && !disabled) setMode('BUILD_ROAD');
+  }, [roadIsForced, disabled, setMode]);
+
+  // Track roll animation: start when ROLL is submitted, stop when dice arrive
+  const handleRoll = () => {
+    setRollPending(true);
+    setRollKey(k => k + 1);
+    onAction({ action_type: 'ROLL', value: null });
+  };
+  useEffect(() => {
+    if (!rollPending) {
+      // Keep prevDice in sync so we always know what value was current when the
+      // human clicked Roll — bot rolls update lastRollDice without setting rollPending.
+      prevDice.current = lastRollDice;
+      return;
+    }
+    if (lastRollDice !== prevDice.current) {
+      setRollPending(false);
+      prevDice.current = lastRollDice;
+    }
+  }, [lastRollDice, rollPending]);
+
+  const isRolling = rollPending || (!isHumanTurn && thinking.phase !== 'idle' && hasRoll);
+
+  // Maritime give rates
   const maritimeGiveRates = useMemo(() => {
     const rates = new Map<ResourceType, number>();
     for (const a of playableActions) {
@@ -204,387 +328,239 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
       const giveIndices = val.slice(0, -1).filter((v): v is number => v !== null);
       if (giveIndices.length === 0) continue;
       const res = RESOURCE_ORDER[giveIndices[0]] as ResourceType;
-      if (res && !rates.has(res)) {
-        rates.set(res, giveIndices.length);
-      }
+      if (res && !rates.has(res)) rates.set(res, giveIndices.length);
     }
     return rates;
   }, [playableActions]);
 
-  const handleMaritimeGive = (res: ResourceType) => {
-    setMarGiving(res);
-  };
-
-  const handleMaritimeReceive = (res: ResourceType) => {
-    if (!marGiving) return;
-    const action = playableActions.find(a => {
-      if (a.action_type !== 'MARITIME_TRADE' || !Array.isArray(a.value)) return false;
-      const val = a.value as (number | null)[];
-      const givenRes = val.slice(0, -1).filter(v => v !== null);
-      const gotten = val[val.length - 1];
-      return gotten === RESOURCE_ORDER.indexOf(res) &&
-        givenRes.every(v => v === RESOURCE_ORDER.indexOf(marGiving));
-    });
-    if (action) {
-      onAction(action);
-    }
-    setMarGiving(null);
-  };
-
-  // Monopoly state
-  const handleMonopoly = (res: ResourceType) => {
-    onAction({ action_type: 'PLAY_MONOPOLY', value: RESOURCE_ORDER.indexOf(res) });
-  };
-
-  // Trade response
-  const handleAcceptTrade = () => {
-    const action = playableActions.find(a => a.action_type === 'ACCEPT_TRADE');
-    if (action) onAction(action);
-  };
-
-  const handleRejectTrade = () => {
-    const action = playableActions.find(a => a.action_type === 'REJECT_TRADE');
-    if (action) onAction(action);
-  };
+  const isThinking = thinking.phase === 'thinking' || thinking.phase === 'submitting';
 
   if (!gameState) return null;
 
+  const buildActions = [
+    hasBuildSettlement && { key: 'settlement', label: 'Settlement', iconName: 'settlement' as const, cost: BUILD_COSTS.settlement, modeKey: 'BUILD_SETTLEMENT' as const },
+    hasBuildCity      && { key: 'city',       label: 'City',       iconName: 'city'       as const, cost: BUILD_COSTS.city,       modeKey: 'BUILD_CITY'       as const },
+    hasBuildRoad      && { key: 'road',        label: 'Road',       iconName: 'road'       as const, cost: BUILD_COSTS.road,       modeKey: 'BUILD_ROAD'       as const },
+    hasBuyDev         && { key: 'devcard',     label: 'Buy Dev Card', iconName: 'devcard'  as const, cost: BUILD_COSTS.devcard,    modeKey: null               as null  },
+  ].filter(Boolean) as Array<{
+    key: string; label: string; iconName: 'settlement' | 'city' | 'road' | 'devcard';
+    cost: Partial<Record<ResourceType, number>>;
+    modeKey: 'BUILD_SETTLEMENT' | 'BUILD_CITY' | 'BUILD_ROAD' | null;
+  }>;
+
+  const visibleBuilds = isHumanTurn ? buildActions : [];
+
+  const devActions = [
+    hasPlayKnight       && { type: 'PLAY_KNIGHT_CARD'    as const, label: 'Knight',        icon: 'army-badge' as const },
+    hasPlayRoadBuilding && { type: 'PLAY_ROAD_BUILDING'  as const, label: 'Road Building', icon: 'road'       as const },
+  ].filter(Boolean) as Array<{ type: string; label: string; icon: 'army-badge' | 'road' }>;
+
+  // ---- persistent status card content ----
+  const statusContent = (() => {
+    if (!humanIndices.length) return null;
+    if (isThinking) return {
+      eyebrow: 'AI Thinking', eyebrowPulse: true,
+      text: thinking.message, textColor: 'var(--text-dim)' as string,
+      progress: thinking.progress,
+    };
+    if (!isHumanTurn) return {
+      eyebrow: 'Waiting', eyebrowPulse: false,
+      text: `${currentPlayer?.name ?? 'Opponent'} is playing…`, textColor: 'var(--text-faint)' as string,
+      progress: null,
+    };
+    if (hasDiscard) return { eyebrow: 'Action Required', eyebrowPulse: false, text: 'Choose cards to discard', textColor: 'var(--p-red)' as string, progress: null };
+    if (hasMoveRobber) return { eyebrow: 'Place Robber', eyebrowPulse: false, text: 'Click a tile to move the robber', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (hasTradeResponse) return { eyebrow: 'Trade Offer', eyebrowPulse: false, text: 'Respond to the trade offer', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (phase === 'INITIAL_BUILD' && hasBuildSettlement) return { eyebrow: 'Setup Phase', eyebrowPulse: false, text: 'Place your settlement on a corner', textColor: '#6ee7b7' as string, progress: null };
+    if (phase === 'INITIAL_BUILD' && hasBuildRoad) return { eyebrow: 'Setup Phase', eyebrowPulse: false, text: 'Place a road next to your settlement', textColor: '#6ee7b7' as string, progress: null };
+    if (hasRoll) return { eyebrow: 'Your Turn', eyebrowPulse: false, text: 'Roll the dice to start', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (mode === 'BUILD_ROAD' || roadIsForced) return { eyebrow: 'Build Mode', eyebrowPulse: false, text: 'Click a glowing edge to place road', textColor: 'var(--sapphire-bright)' as string, progress: null };
+    if (mode === 'BUILD_SETTLEMENT') return { eyebrow: 'Build Mode', eyebrowPulse: false, text: 'Click a glowing corner to place settlement', textColor: '#6ee7b7' as string, progress: null };
+    if (mode === 'BUILD_CITY') return { eyebrow: 'Build Mode', eyebrowPulse: false, text: 'Click a settlement to upgrade to city', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (hasEndTurn) return { eyebrow: 'Your Turn', eyebrowPulse: false, text: 'Build, trade, or end your turn', textColor: 'var(--text-dim)' as string, progress: null };
+    return { eyebrow: 'Your Turn', eyebrowPulse: false, text: 'Awaiting action…', textColor: 'var(--text-faint)' as string, progress: null };
+  })();
+
+  // ---- render ----
   return (
-    <div className="flex flex-col gap-2 p-3">
-      {/* Thinking indicator */}
-      <AnimatePresence>
-        {isThinking && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-slate-800/60 border border-slate-600/50 rounded-xl p-3"
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 190, pointerEvents: 'auto' }}>
+
+      {/* Status / hint card — always rendered, never pops in/out */}
+      {statusContent && (
+        <div className="panel" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <div
+            className={`eyebrow${statusContent.eyebrowPulse ? ' thinking-pulse' : ''}`}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
           >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="thinking-pulse text-sm">🧠</div>
-              <span className="text-sm text-slate-300">{thinking.message}</span>
-              <span className="ml-auto text-xs text-slate-500">
-                {Math.round(thinking.progress)}%
+            <span>{statusContent.eyebrow}</span>
+            {statusContent.progress !== null && (
+              <span style={{ fontSize: 10, color: 'var(--text-faint)', fontFamily: 'var(--ff-mono, monospace)' }}>
+                {Math.round(statusContent.progress)}%
               </span>
-            </div>
-            <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            )}
+          </div>
+          <div style={{ fontSize: 12, color: statusContent.textColor, lineHeight: 1.4 }}>
+            {statusContent.text}
+          </div>
+          {statusContent.progress !== null && (
+            <div style={{ height: 3, background: 'var(--glass-hi)', borderRadius: 4, overflow: 'hidden' }}>
               <motion.div
-                className="h-full bg-blue-500 rounded-full"
-                animate={{ width: `${thinking.progress}%` }}
+                style={{ height: '100%', background: 'var(--sapphire-bright)', borderRadius: 4 }}
+                animate={{ width: `${statusContent.progress}%` }}
                 transition={{ duration: 0.3 }}
               />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Discard phase */}
-      {hasDiscard && <DiscardPanel onAction={onAction} disabled={disabled} />}
-
-      {/* Move robber instruction */}
-      {hasMoveRobber && !hasDiscard && (
-        <div className="text-xs text-amber-400 bg-amber-950/30 border border-amber-800/30 rounded-xl p-3">
-          🥷 Click a tile to move the robber
-        </div>
-      )}
-
-      {/* Road placement instruction */}
-      {(mode === 'BUILD_ROAD' || roadIsForced) && hasBuildRoad && !disabled && (
-        <div className="text-xs text-blue-300 bg-blue-950/30 border border-blue-800/30 rounded-xl p-3">
-          🛤️ Click a glowing edge on the board to place your road
-        </div>
-      )}
-
-      {/* Settlement placement instruction */}
-      {mode === 'BUILD_SETTLEMENT' && hasBuildSettlement && !disabled && (
-        <div className="text-xs text-green-300 bg-green-950/30 border border-green-800/30 rounded-xl p-3">
-          🏠 Click a glowing node on the board to place your settlement
-        </div>
-      )}
-
-      {/* Trade responses */}
-      {(hasAcceptTrade || hasRejectTrade || hasConfirmTrade || hasCancelTrade) && (
-        <div className="bg-slate-800/60 border border-slate-600/50 rounded-xl p-3 space-y-2">
-          <div className="text-xs text-slate-400 font-semibold">Trade Response</div>
-          {gameState.current_trade && (
-            <TradeDisplay trade={gameState.current_trade} />
           )}
-          <div className="flex gap-2">
-            {hasAcceptTrade && (
-              <ActionButton label="Accept" emoji="✓" onClick={handleAcceptTrade} variant="success" disabled={disabled} />
-            )}
-            {hasRejectTrade && (
-              <ActionButton label="Reject" emoji="✗" onClick={handleRejectTrade} variant="danger" disabled={disabled} />
-            )}
-            {hasConfirmTrade && (
-              <ActionButton label="Confirm Trade" emoji="🤝" onClick={() => {
-                const action = playableActions.find(a => a.action_type === 'CONFIRM_TRADE');
-                if (action) onAction(action);
-              }} variant="success" disabled={disabled} />
-            )}
-            {hasCancelTrade && (
-              <ActionButton label="Cancel" emoji="✗" onClick={() => {
-                const action = playableActions.find(a => a.action_type === 'CANCEL_TRADE');
-                if (action) onAction(action);
-              }} variant="ghost" disabled={disabled} />
-            )}
-          </div>
         </div>
       )}
 
-      {/* Dice result — shown after roll, hidden when roll button is available */}
-      <AnimatePresence>
-        {lastRollDice && !hasRoll && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="flex items-center gap-3 bg-slate-800/80 border border-slate-600/50 rounded-xl px-4 py-2.5"
-          >
-            <span className="text-slate-400 text-xs font-medium">Rolled</span>
-            <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white text-slate-900 font-bold text-base shadow">
-                {lastRollDice[0]}
-              </span>
-              <span className="text-slate-500 text-sm">+</span>
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white text-slate-900 font-bold text-base shadow">
-                {lastRollDice[1]}
-              </span>
-            </div>
-            <span className="text-white font-bold text-lg">= {lastRollDice[0] + lastRollDice[1]}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Main actions */}
-      <div className="flex flex-wrap gap-2">
-        {hasRoll && (
-          <ActionButton
-            label="Roll Dice"
-            emoji="🎲"
-            onClick={() => onAction({ action_type: 'ROLL', value: null })}
-            variant="primary"
-            disabled={disabled}
-          />
-        )}
-
-        {hasBuildSettlement && (
-          <ActionButton
-            label="Settlement"
-            emoji="🏠"
-            onClick={() => setMode(mode === 'BUILD_SETTLEMENT' ? 'IDLE' : 'BUILD_SETTLEMENT')}
-            variant="default"
-            active={mode === 'BUILD_SETTLEMENT'}
-            disabled={disabled}
-            title="Click a legal node on the board"
-          />
-        )}
-
-        {hasBuildCity && (
-          <ActionButton
-            label="City"
-            emoji="🏰"
-            onClick={() => setMode(mode === 'BUILD_CITY' ? 'IDLE' : 'BUILD_CITY')}
-            variant="default"
-            active={mode === 'BUILD_CITY'}
-            disabled={disabled}
-            title="Click your settlement to upgrade"
-          />
-        )}
-
-        {hasBuildRoad && (
-          <ActionButton
-            label="Road"
-            emoji="🛤️"
-            onClick={() => setMode(mode === 'BUILD_ROAD' ? 'IDLE' : 'BUILD_ROAD')}
-            variant="default"
-            active={mode === 'BUILD_ROAD'}
-            disabled={disabled}
-            title="Click a legal edge on the board"
-          />
-        )}
-
-        {hasBuyDevCard && (
-          <ActionButton
-            label="Dev Card"
-            emoji="📜"
-            onClick={() => onAction({ action_type: 'BUY_DEVELOPMENT_CARD', value: null })}
-            variant="default"
-            disabled={disabled}
-          />
-        )}
-      </div>
-
-      {/* Dev card actions */}
-      {(hasPlayKnight || hasPlayYop || hasPlayMonopoly || hasPlayRoadBuilding) && (
-        <div className="border-t border-slate-700/50 pt-2">
-          <div className="text-xs text-slate-500 mb-1.5">Dev Cards</div>
-          <div className="flex flex-wrap gap-1.5">
-            {hasPlayKnight && (
-              <ActionButton
-                label="Knight"
-                emoji="⚔️"
-                onClick={() => {
-                  onAction({ action_type: 'PLAY_KNIGHT_CARD', value: null });
-                  setMode('MOVE_ROBBER');
-                }}
-                variant="ghost"
-                disabled={disabled}
-              />
-            )}
-            {hasPlayRoadBuilding && (
-              <ActionButton
-                label="Road Building"
-                emoji="🛤️"
-                onClick={() => onAction({ action_type: 'PLAY_ROAD_BUILDING', value: null })}
-                variant="ghost"
-                disabled={disabled}
-              />
-            )}
-          </div>
-        </div>
+      {/* Special phase panels — only shown during human's turn */}
+      {isHumanTurn && hasDiscard && <DiscardPanel onAction={onAction} disabled={disabled} />}
+      {isHumanTurn && hasTradeResponse && (
+        <TradeResponse onAction={onAction} disabled={disabled} actions={playableActions} />
       )}
 
-      {/* Year of Plenty picker */}
-      {hasPlayYop && (
-        <div className="border-t border-slate-700/50 pt-2">
-          <div className="text-xs text-slate-500 mb-1.5">🎁 Year of Plenty {yopPick ? `— pick 2nd resource (got ${yopPick})` : '— pick 1st resource'}</div>
-          <div className="flex flex-wrap gap-1.5">
-            {RESOURCE_ORDER.map(res => (
-              <button
-                key={res}
-                onClick={() => handleYop(res)}
-                disabled={disabled}
-                className={clsx(
-                  'flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs',
-                  'bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-all',
-                  yopPick === res && 'ring-2 ring-blue-400',
-                )}
-              >
-                {RESOURCE_EMOJI[res]} {RESOURCE_LABELS[res]}
-              </button>
-            ))}
-            {yopPick && (
-              <button onClick={() => setYopPick(null)} className="text-xs text-slate-500 hover:text-slate-300">
-                Cancel
-              </button>
-            )}
-          </div>
-        </div>
+      {/* YoP picker */}
+      {isHumanTurn && hasPlayYop && (
+        <ResourcePicker
+          title={yopPick ? `Year of Plenty — pick 2nd (got ${yopPick})` : 'Year of Plenty — pick 1st resource'}
+          onPick={(res) => {
+            if (!yopPick) { setYopPick(res); }
+            else {
+              onAction({ action_type: 'PLAY_YEAR_OF_PLENTY', value: [RESOURCE_ORDER.indexOf(yopPick), RESOURCE_ORDER.indexOf(res)] });
+              setYopPick(null);
+            }
+          }}
+          onCancel={() => setYopPick(null)}
+          disabled={disabled}
+        />
       )}
 
       {/* Monopoly picker */}
-      {hasPlayMonopoly && (
-        <div className="border-t border-slate-700/50 pt-2">
-          <div className="text-xs text-slate-500 mb-1.5">💰 Monopoly — pick resource</div>
-          <div className="flex flex-wrap gap-1.5">
-            {RESOURCE_ORDER.map(res => (
-              <button
-                key={res}
-                onClick={() => handleMonopoly(res)}
-                disabled={disabled}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-all"
-              >
-                {RESOURCE_EMOJI[res]} {RESOURCE_LABELS[res]}
-              </button>
-            ))}
-          </div>
-        </div>
+      {isHumanTurn && hasPlayMono && (
+        <ResourcePicker
+          title="Monopoly — pick a resource to claim"
+          onPick={(res) => onAction({ action_type: 'PLAY_MONOPOLY', value: RESOURCE_ORDER.indexOf(res) })}
+          onCancel={() => {}}
+          disabled={disabled}
+        />
       )}
 
-      {/* Maritime trade */}
-      {hasMaritime && (
-        <div className="border-t border-slate-700/50 pt-2">
-          <div className="text-xs text-slate-500 mb-1.5">
-            ⚓ Maritime Trade {marGiving ? `— pick resource to receive (giving ${marGiving})` : '— pick resource to give'}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {RESOURCE_ORDER.map(res => {
-              if (!marGiving) {
-                // Step 1: only show resources that appear in a valid MARITIME_TRADE action
-                const rate = maritimeGiveRates.get(res as ResourceType);
-                if (!rate) return null;
-                return (
-                  <button
-                    key={res}
-                    onClick={() => handleMaritimeGive(res as ResourceType)}
-                    disabled={disabled}
-                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-all"
-                  >
-                    {RESOURCE_EMOJI[res as ResourceType]} {RESOURCE_LABELS[res as ResourceType]}
-                    <span className="text-slate-400">{rate}:1</span>
-                  </button>
-                );
-              }
-              // Step 2: show all resources as receive options
-              return (
-                <button
-                  key={res}
-                  onClick={() => handleMaritimeReceive(res as ResourceType)}
-                  disabled={disabled || res === marGiving}
-                  className={clsx(
-                    'flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs',
-                    'bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-all',
-                    res === marGiving && 'opacity-40 cursor-not-allowed',
-                  )}
-                >
-                  {RESOURCE_EMOJI[res as ResourceType]} {RESOURCE_LABELS[res as ResourceType]}
-                </button>
-              );
-            })}
-            {marGiving && (
-              <button onClick={() => setMarGiving(null)} className="text-xs text-slate-500 hover:text-slate-300">
-                Cancel
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Dice tray + main action button — always visible */}
+      <div className="panel" style={{
+        padding: '12px 14px 14px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+      }}>
+        <div className="eyebrow">Dice</div>
+        <DiceTray dice={lastRollDice} rolling={isRolling} rollKey={rollKey} />
 
-      {/* End turn */}
-      {hasEndTurn && (
-        <div className="mt-auto pt-2 border-t border-slate-700/50">
-          <ActionButton
-            label="End Turn"
-            emoji="⏭️"
+        {isHumanTurn && hasRoll && (
+          <button
+            onClick={handleRoll}
+            disabled={disabled || isRolling}
+            className="btn btn-amber"
+            style={{
+              width: '100%', padding: '12px 0', fontSize: 14,
+              fontFamily: 'var(--ff-display)', fontWeight: 700, letterSpacing: '0.03em',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              opacity: (disabled || isRolling) ? 0.45 : 1,
+            }}
+          >
+            <Icon name="dice" size={17} color="#2a1a05" />
+            {isRolling ? 'Rolling…' : 'Roll Dice'}
+          </button>
+        )}
+
+        {isHumanTurn && hasEndTurn && !hasRoll && (
+          <button
             onClick={() => onAction({ action_type: 'END_TURN', value: null })}
-            variant="primary"
             disabled={disabled}
-          />
+            className="btn btn-primary"
+            style={{
+              width: '100%', padding: '12px 0', fontSize: 14,
+              fontFamily: 'var(--ff-display)', fontWeight: 700, letterSpacing: '0.03em',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              opacity: disabled ? 0.45 : 1,
+            }}
+          >
+            <Icon name="arrow-right" size={17} color="#fff" />
+            End Turn
+          </button>
+        )}
+      </div>
+
+      {/* Build column — visible on human's turn OR when human can afford something during AI turns */}
+      {visibleBuilds.length > 0 && (
+        <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <div className="eyebrow" style={{ padding: '0 1px 1px' }}>Build</div>
+          {visibleBuilds.map(b => (
+            <BuildButton
+              key={b.key}
+              label={b.label}
+              iconName={b.iconName}
+              cost={b.cost}
+              resources={resources}
+              rolled={rolled}
+              isMyTurn={isHumanTurn}
+              active={b.modeKey ? mode === b.modeKey : false}
+              disabled={disabled}
+              onClick={() => {
+                if (!isHumanTurn) return;
+                if (b.modeKey) {
+                  setMode(mode === b.modeKey ? 'IDLE' : b.modeKey);
+                } else {
+                  onAction({ action_type: 'BUY_DEVELOPMENT_CARD', value: null });
+                }
+              }}
+            />
+          ))}
+
+          {/* Dev card action buttons — human turn only */}
+          {isHumanTurn && devActions.length > 0 && (
+            <>
+              <div style={{ height: 1, background: 'var(--hairline)', margin: '2px 0' }} />
+              {devActions.map(d => (
+                <button
+                  key={d.type}
+                  onClick={() => {
+                    onAction({ action_type: d.type as PlayableAction['action_type'], value: null });
+                    if (d.type === 'PLAY_KNIGHT_CARD') setMode('MOVE_ROBBER');
+                  }}
+                  disabled={disabled}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 9,
+                    background: 'rgba(150,130,235,0.1)', border: '1px solid rgba(150,130,235,0.3)',
+                    color: '#d4c9f5', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(150,130,235,0.2)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(150,130,235,0.1)'; }}
+                >
+                  <Icon name={d.icon} size={15} color="#a98bff" />
+                  {d.label}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
 
-      {/* No actions available */}
-      {playableActions.length === 0 && !isThinking && !hasDiscard && !hasMoveRobber && (
-        <div className="text-xs text-slate-600 text-center py-2">
-          Waiting for other players...
+      {/* Maritime trade rate summary (human only) */}
+      {isHumanTurn && maritimeGiveRates.size > 0 && !hasDiscard && (
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', paddingLeft: 2 }}>
+          {Array.from(maritimeGiveRates.entries()).map(([res, rate]) => (
+            <span key={res} style={{
+              display: 'flex', alignItems: 'center', gap: 3,
+              fontSize: 10.5, fontWeight: 700, color: rate <= 3 ? 'var(--amber-soft)' : 'var(--text-faint)',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid var(--hairline)',
+              borderRadius: 6, padding: '3px 7px',
+            }}>
+              <ResourceIcon type={res} size={12} shadow={false} />
+              {rate}:1
+            </span>
+          ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function TradeDisplay({ trade }: { trade: number[] }) {
-  const offer = trade.slice(0, 5);
-  const ask = trade.slice(5, 10);
-
-  return (
-    <div className="flex items-center gap-3 text-xs text-slate-300">
-      <div className="flex gap-1">
-        {RESOURCE_ORDER.map((res, i) => offer[i] > 0 && (
-          <span key={res} className="bg-green-900/40 px-1 rounded">
-            {RESOURCE_EMOJI[res]}×{offer[i]}
-          </span>
-        ))}
-      </div>
-      <span className="text-slate-500">↔</span>
-      <div className="flex gap-1">
-        {RESOURCE_ORDER.map((res, i) => ask[i] > 0 && (
-          <span key={res} className="bg-blue-900/40 px-1 rounded">
-            {RESOURCE_EMOJI[res]}×{ask[i]}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }

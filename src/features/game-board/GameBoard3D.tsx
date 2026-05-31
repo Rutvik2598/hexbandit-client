@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useCallback } from 'react';
+import { Suspense, useMemo, useCallback, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
@@ -164,6 +164,26 @@ function BeachBorder() {
   return <mesh geometry={geometry} material={material} position={[0, -0.07, 0]} />;
 }
 
+// ── Sidebar-aware camera ───────────────────────────────────────────────────────
+// Shifts the projection so the board appears centred in the left zone even
+// though the canvas now fills the full screen (including behind the sidebar).
+// setViewOffset tells Three.js to render a sub-region of a wider virtual
+// frustum: world-origin ends up at pixel (W - sidebarWidth) / 2 on screen.
+function SidebarAwareCamera({ sidebarWidth }: { sidebarWidth: number }) {
+  const { camera, size } = useThree();
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    cam.setViewOffset(
+      size.width + sidebarWidth, size.height,
+      sidebarWidth, 0,
+      size.width, size.height,
+    );
+    cam.updateProjectionMatrix();
+    return () => { cam.clearViewOffset(); cam.updateProjectionMatrix(); };
+  }, [camera, size.width, size.height, sidebarWidth]);
+  return null;
+}
+
 // ── Board scene ────────────────────────────────────────────────────────────────
 interface BoardSceneProps {
   onAction?: (action: PlayableAction) => void;
@@ -171,8 +191,6 @@ interface BoardSceneProps {
 }
 
 function BoardScene({ onAction, disabled }: BoardSceneProps) {
-  const { scene } = useThree();
-  scene.background = new THREE.Color('#060e1c');
 
   const gameState = useGameStore(s => s.gameState);
   const replayMode = useGameStore(s => s.replayMode);
@@ -303,6 +321,8 @@ function BoardScene({ onAction, disabled }: BoardSceneProps) {
 
   return (
     <>
+      <SidebarAwareCamera sidebarWidth={372} />
+
       {/* Lighting — intensities tuned for sRGB-correct textures + NoToneMapping */}
       <ambientLight intensity={1.2} color="#c8deff" />
       <directionalLight
@@ -323,8 +343,8 @@ function BoardScene({ onAction, disabled }: BoardSceneProps) {
       <OrbitControls
         enableRotate={false}
         enablePan={false}
-        minDistance={6}
-        maxDistance={20}
+        minDistance={5}
+        maxDistance={24}
         target={[0, 0, 0]}
       />
 
@@ -432,7 +452,7 @@ export default function GameBoard3D({ onAction, disabled }: GameBoard3DProps) {
       <Canvas
         camera={{ position: [0, 14, 9], fov: 45, near: 0.1, far: 200 }}
         shadows
-        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: THREE.NoToneMapping }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance', toneMapping: THREE.NoToneMapping }}
         dpr={[1, 2]}
       >
         <Suspense fallback={<BoardLoadingFallback />}>

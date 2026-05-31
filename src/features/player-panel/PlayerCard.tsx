@@ -1,11 +1,7 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import clsx from 'clsx';
-import {
-  PLAYER_COLORS,
-  PLAYER_COLORS_BG,
-  RESOURCE_EMOJI,
-  RESOURCE_ORDER,
-} from '@/shared/constants';
+import { motion } from 'framer-motion';
+import { Icon } from '@/shared/components/Icon';
+import { ImgIcon } from '@/shared/components/ResourceIcon';
+import { PLAYER_COLORS } from '@/shared/constants';
 import type { Player, PlayerColor } from '@/shared/types/game';
 
 interface PlayerCardProps {
@@ -14,174 +10,136 @@ interface PlayerCardProps {
   isHumanPlayer: boolean;
   pwin?: number | null;
   compact?: boolean;
-  resourceGains?: Partial<Record<string, number>> | null;
 }
-
-const ROAD = '🛤️';
-const SWORD = '⚔️';
 
 export default function PlayerCard({
   player,
   isCurrentTurn,
   isHumanPlayer,
   pwin,
-  compact = false,
-  resourceGains,
 }: PlayerCardProps) {
   const color = player.color as PlayerColor;
-  const playerColor = PLAYER_COLORS[color] || '#ccc';
-  const playerBg = PLAYER_COLORS_BG[color] || 'rgba(255,255,255,0.05)';
+  const hex   = PLAYER_COLORS[color] || '#ccc';
 
-  const totalResources = Object.values(player.resources).reduce((a, b) => a + b, 0);
+  const totalCards = Object.values(player.resources).reduce((a, b) => a + b, 0);
 
   return (
     <motion.div
-      className={clsx(
-        'rounded-xl border transition-all duration-200',
-        'backdrop-blur-sm',
-        isCurrentTurn
-          ? 'border-opacity-60 shadow-lg'
-          : 'border-slate-700/50',
-      )}
       style={{
-        backgroundColor: isCurrentTurn ? playerBg : 'rgba(15,20,35,0.6)',
-        borderColor: isCurrentTurn ? playerColor : undefined,
-        boxShadow: isCurrentTurn ? `0 0 20px ${playerColor}30` : undefined,
+        position: 'relative',
+        padding: '12px 13px',
+        borderRadius: 'var(--r-md)',
+        background: isCurrentTurn
+          ? `color-mix(in srgb, ${hex} 13%, var(--glass-2))`
+          : 'rgba(255,255,255,0.025)',
+        border: `1px solid ${isCurrentTurn ? hex : 'var(--hairline)'}`,
+        // CSS custom property for the turnPulse animation
+        ['--ring-c' as string]: hex,
+        transition: 'background 0.2s',
       }}
-      animate={isCurrentTurn ? { scale: [1, 1.01, 1] } : { scale: 1 }}
-      transition={{ duration: 2, repeat: isCurrentTurn ? Infinity : 0 }}
+      animate={isCurrentTurn ? {
+        boxShadow: [
+          `0 0 0 1px ${hex}, 0 0 18px -2px ${hex}`,
+          `0 0 0 1px ${hex}, 0 0 34px 2px ${hex}`,
+          `0 0 0 1px ${hex}, 0 0 18px -2px ${hex}`,
+        ],
+      } : { boxShadow: 'none' }}
+      transition={{ duration: 2.4, repeat: isCurrentTurn ? Infinity : 0, ease: 'easeInOut' }}
     >
-      <div className={clsx('p-3', compact && 'p-2')}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            {/* Color dot */}
-            <div
-              className="w-3 h-3 rounded-full ring-2 ring-black/30 flex-shrink-0"
-              style={{ backgroundColor: playerColor }}
-            />
-            <div>
-              <div className="flex items-center gap-1">
-                <span className={clsx('font-semibold text-sm', compact && 'text-xs')} style={{ color: playerColor }}>
-                  {player.name}
-                </span>
-                {isHumanPlayer && (
-                  <span className="text-[9px] bg-slate-700 text-slate-300 px-1 rounded">You</span>
-                )}
-                {isCurrentTurn && (
-                  <motion.span
-                    className="text-[9px] px-1 rounded font-bold"
-                    style={{ backgroundColor: playerColor + '30', color: playerColor }}
-                    animate={{ opacity: [1, 0.5, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  >
-                    ▶ Turn
-                  </motion.span>
-                )}
-              </div>
-            </div>
-          </div>
+      {/* top row: color dot + name + turn badge + VP */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        {/* colour dot */}
+        <span style={{
+          width: 11, height: 11, borderRadius: '50%', background: hex, flexShrink: 0,
+          boxShadow: `0 0 9px ${hex}`,
+          border: color === 'WHITE' ? '1px solid rgba(0,0,0,0.3)' : 'none',
+        }} />
 
-          {/* VP */}
-          <div className="text-right">
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-slate-500">VP</span>
-              <span className={clsx('font-bold', compact ? 'text-sm' : 'text-base')} style={{ color: playerColor }}>
-                {player.victory_points}
-              </span>
-            </div>
-            {/* Pwin */}
-            {pwin !== null && pwin !== undefined && (
-              <div className="text-[10px] text-slate-400">
-                {Math.round(pwin * 100)}% win
-              </div>
-            )}
-          </div>
-        </div>
+        {/* name + badges */}
+        <span style={{ fontWeight: 800, fontSize: 14.5, color: 'var(--text)', flex: 1, minWidth: 0, truncate: true }}>
+          {player.name}
+        </span>
+        {isHumanPlayer && (
+          <span style={{
+            fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-faint)',
+            padding: '2px 6px', borderRadius: 5,
+            background: 'rgba(255,255,255,0.05)', textTransform: 'uppercase',
+          }}>You</span>
+        )}
+        {isCurrentTurn && (
+          <motion.span
+            style={{
+              marginLeft: 'auto',
+              fontSize: 9.5, fontWeight: 800, letterSpacing: '0.12em', color: hex,
+              textTransform: 'uppercase',
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}
+            animate={{ opacity: [1, 0.5, 1] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: hex, boxShadow: `0 0 8px ${hex}` }} />
+            Turn
+          </motion.span>
+        )}
 
-        {/* Stats row */}
-        <div className="flex items-center gap-3 text-xs text-slate-400 mb-2">
-          <span title="Settlements">🏠 {player.settlements}</span>
-          <span title="Cities">🏰 {player.cities}</span>
-          <span title="Roads">🛤️ {player.roads_built}</span>
+        {/* VP */}
+        <span style={{
+          marginLeft: isCurrentTurn ? 8 : 'auto',
+          display: 'flex', alignItems: 'center', gap: 4,
+          fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 18,
+          color: 'var(--amber-soft)',
+        }}>
+          <Icon name="star" size={14} color="var(--amber)" />
+          {player.victory_points}
+        </span>
+      </div>
+
+      {/* second row: cards / dev / badges */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8, paddingLeft: 20 }}>
+        {/* card count */}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--text-dim)' }}>
+          <Icon name="cards" size={13} color="var(--text-faint)" />
+          {isHumanPlayer ? totalCards : (player as Player & { cards?: number }).cards ?? totalCards}
+        </span>
+
+        {/* dev count */}
+        {player.num_dev_cards > 0 && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--text-dim)' }}>
+            <Icon name="devcard" size={13} color="var(--text-faint)" />
+            {player.num_dev_cards}
+          </span>
+        )}
+
+        {/* knights */}
+        {player.knights_played > 0 && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 700, color: 'var(--text-faint)' }}>
+            <ImgIcon name="knight" size={13} />
+            {player.knights_played}
+          </span>
+        )}
+
+        {/* pwin */}
+        {pwin !== null && pwin !== undefined && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginLeft: 'auto' }}>
+            {Math.round(pwin * 100)}%
+          </span>
+        )}
+
+        {/* special badges */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 5 }}>
           {player.has_longest_road && (
-            <span className="text-yellow-400" title="Longest Road">{ROAD} LR</span>
+            <span title="Longest Road" style={{ display: 'grid', placeItems: 'center' }}>
+              <ImgIcon name="longest_road" size={24} />
+            </span>
           )}
           {player.has_largest_army && (
-            <span className="text-purple-400" title="Largest Army">{SWORD} LA</span>
+            <span title="Largest Army" style={{ display: 'grid', placeItems: 'center' }}>
+              <ImgIcon name="largest_army" size={24} />
+            </span>
           )}
         </div>
-
-        {/* Resources */}
-        {!compact && (
-          <div className="mb-2">
-            <div className="flex items-center gap-1 flex-wrap">
-              {RESOURCE_ORDER.map(res => {
-                const count = player.resources[res];
-                const gain = resourceGains?.[res];
-                if (count === 0 && !isHumanPlayer && !gain) return null;
-                return (
-                  <div key={res} className="relative">
-                    <div
-                      className={clsx(
-                        'flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md transition-all',
-                        count > 0 ? 'bg-slate-700/70' : 'bg-slate-800/30 opacity-40',
-                        gain && 'ring-1 ring-green-400/60 bg-green-900/30',
-                      )}
-                      title={res}
-                    >
-                      <span>{RESOURCE_EMOJI[res]}</span>
-                      <span className="font-mono font-bold text-slate-200">{count}</span>
-                    </div>
-                    <AnimatePresence>
-                      {gain && (
-                        <motion.span
-                          key={`gain-${res}`}
-                          initial={{ opacity: 0, y: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, y: -14, scale: 1 }}
-                          exit={{ opacity: 0, y: -20 }}
-                          transition={{ duration: 0.3 }}
-                          className="absolute -top-1 -right-1 text-[9px] font-bold text-green-300 bg-green-900/80 border border-green-500/50 rounded px-0.5 leading-tight pointer-events-none"
-                        >
-                          +{gain}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              })}
-              {!isHumanPlayer && totalResources > 0 && (
-                <div className="text-xs text-slate-500">
-                  {totalResources} cards
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Dev cards */}
-        {!compact && (player.num_dev_cards > 0 || Object.values(player.dev_cards_played).some(v => v > 0)) && (
-          <div className="flex items-center gap-2 text-[11px] text-slate-400">
-            {player.num_dev_cards > 0 && (
-              <span>📜 {player.num_dev_cards} in hand</span>
-            )}
-            {player.knights_played > 0 && (
-              <span>⚔️ {player.knights_played} knights</span>
-            )}
-          </div>
-        )}
-
-        {/* Ports */}
-        {!compact && player.port_resources.length > 0 && (
-          <div className="flex items-center gap-1 mt-1">
-            {player.port_resources.map((port, i) => (
-              <span key={i} className="text-[10px] bg-blue-900/30 text-blue-300 px-1 rounded">
-                {port ? `${RESOURCE_EMOJI[port]} 2:1` : '⚓ 3:1'}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
+
     </motion.div>
   );
 }

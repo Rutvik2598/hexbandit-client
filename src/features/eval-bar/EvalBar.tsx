@@ -1,115 +1,111 @@
+/**
+ * EvalBar / WinProbBar — segmented probability bar, one segment per player.
+ * Styled to match the design's WinProbBar component.
+ */
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { PLAYER_COLORS } from '@/shared/constants';
 import type { PlayerColor } from '@/shared/types/game';
-import clsx from 'clsx';
 
 interface EvalBarProps {
   compact?: boolean;
 }
 
 export default function EvalBar({ compact = false }: EvalBarProps) {
-  const lastPwin = useGameStore(s => s.lastPwin);
-  const isEvaluating = useGameStore(s => s.isEvaluating);
-  const gameState = useGameStore(s => s.gameState);
+  const lastPwin        = useGameStore(s => s.lastPwin);
+  const isEvaluating    = useGameStore(s => s.isEvaluating);
+  const gameState       = useGameStore(s => s.gameState);
   const perspectiveColor = useGameStore(s => s.perspectiveColor);
-
-  const players = gameState?.players || [];
 
   if (!gameState) return null;
 
-  const colors: PlayerColor[] = players.map(p => p.color);
+  const players = gameState.players;
+  const n = players.length || 1;
 
-  const segments = colors.map(color => ({
-    color,
-    pwin: lastPwin?.[color] ?? (1 / colors.length),
-    label: color,
+  const segments = players.map(p => ({
+    color: p.color as PlayerColor,
+    pct:   (lastPwin?.[p.color] ?? 1 / n) * 100,
+    name:  p.name,
   }));
 
-  const perspectivePwin = perspectiveColor && lastPwin
-    ? lastPwin[perspectiveColor]
+  const leadIdx = segments.reduce((m, s, i) => s.pct > segments[m].pct ? i : m, 0);
+  const perspPct = perspectiveColor && lastPwin
+    ? Math.round((lastPwin[perspectiveColor] ?? 0) * 100)
     : null;
 
   return (
-    <div className={clsx('select-none', compact ? 'p-1' : 'p-2')}>
-      {/* Header */}
-      <div className={clsx('flex items-center justify-between mb-1', compact ? 'text-[10px]' : 'text-xs')}>
-        <span className="text-slate-400 font-medium tracking-wide uppercase">
-          Win Probability
-        </span>
-        {isEvaluating && (
-          <span className="text-slate-500 thinking-pulse text-[10px]">evaluating…</span>
-        )}
-        {perspectivePwin !== null && perspectivePwin !== undefined && (
-          <span
-            className="font-bold"
-            style={{ color: PLAYER_COLORS[perspectiveColor!] }}
-          >
-            {Math.round(perspectivePwin * 100)}%
-          </span>
-        )}
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+      <span
+        className="eyebrow"
+        style={{ flexShrink: 0, letterSpacing: '0.14em', fontSize: compact ? 9 : 10 }}
+      >
+        Win&nbsp;Odds
+      </span>
 
-      {/* Bar */}
-      <div className="relative h-5 rounded-full overflow-hidden bg-slate-900 flex">
-        {segments.map(({ color, pwin }, i) => (
+      {/* bar */}
+      <div style={{
+        flex: 1, display: 'flex', height: compact ? 18 : 22, borderRadius: 7, overflow: 'hidden',
+        border: '1px solid var(--glass-brd)', background: 'var(--bg-0)',
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)',
+        position: 'relative',
+      }}>
+        {segments.map(({ color, pct, name }, i) => {
+          const c = PLAYER_COLORS[color] || '#666';
+          const isLead = i === leadIdx;
+          const showPct = pct >= 11;
+          return (
+            <motion.div
+              key={color}
+              title={`${name} · ${Math.round(pct)}%`}
+              style={{
+                position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `linear-gradient(180deg, color-mix(in srgb, ${c} 92%, #fff) 0%, ${c} 55%, color-mix(in srgb, ${c} 80%, #000) 100%)`,
+                borderRight: i < segments.length - 1 ? '1.5px solid rgba(6,11,21,0.85)' : 'none',
+                boxShadow: isLead ? `inset 0 0 12px ${c}, inset 0 0 0 1px rgba(255,255,255,0.35)` : 'none',
+                overflow: 'hidden',
+              }}
+              initial={false}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+            >
+              {/* shine */}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(255,255,255,0.18),transparent)' }} />
+              {showPct && (
+                <span style={{
+                  fontSize: compact ? 9 : 11, fontWeight: 800, letterSpacing: '0.01em',
+                  color: color === 'WHITE' ? '#1a2433' : '#fff',
+                  textShadow: color === 'WHITE' ? 'none' : '0 1px 2px rgba(0,0,0,0.45)',
+                  whiteSpace: 'nowrap', position: 'relative', zIndex: 1,
+                }}>
+                  {Math.round(pct)}%
+                </span>
+              )}
+            </motion.div>
+          );
+        })}
+
+        {/* evaluating shimmer */}
+        {isEvaluating && (
           <motion.div
-            key={color}
-            className="eval-segment relative flex items-center justify-center overflow-hidden"
             style={{
-              width: `${pwin * 100}%`,
-              backgroundColor: PLAYER_COLORS[color] || '#666',
-              opacity: !lastPwin ? 0.4 : 1,
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)',
+              pointerEvents: 'none',
             }}
-            initial={false}
-            animate={{ width: `${pwin * 100}%` }}
-            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-            title={`${color}: ${Math.round(pwin * 100)}%`}
-          >
-            {/* Shine */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
-            {/* Separator */}
-            {i < segments.length - 1 && (
-              <div className="absolute right-0 top-0 h-full w-px bg-black/30 z-10" />
-            )}
-            {/* Label */}
-            {pwin > 0.1 && (
-              <span className="relative z-10 text-[10px] font-bold text-white/90 drop-shadow-sm">
-                {Math.round(pwin * 100)}%
-              </span>
-            )}
-          </motion.div>
-        ))}
-
-        {/* Evaluating shimmer */}
-        {isEvaluating && (
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
             animate={{ x: ['-100%', '200%'] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
           />
         )}
       </div>
 
-      {/* Player labels */}
-      {!compact && (
-        <div className="flex mt-1">
-          {segments.map(({ color, pwin }) => (
-            <div
-              key={color}
-              className="flex items-center gap-1 transition-all duration-500"
-              style={{ width: `${pwin * 100}%`, minWidth: 0 }}
-            >
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: PLAYER_COLORS[color] || '#666' }}
-              />
-              {pwin > 0.12 && (
-                <span className="text-[10px] text-slate-400 truncate">{color}</span>
-              )}
-            </div>
-          ))}
-        </div>
+      {/* perspective pwin badge */}
+      {perspPct !== null && perspectiveColor && (
+        <span style={{
+          fontSize: compact ? 10 : 12, fontWeight: 800, flexShrink: 0,
+          color: PLAYER_COLORS[perspectiveColor] || 'var(--text)',
+        }}>
+          {perspPct}%
+        </span>
       )}
     </div>
   );

@@ -29,11 +29,6 @@ export interface GameSession {
   player_ids?: string[];
 }
 
-export interface GameStateResponse {
-  state?: GameState;
-  [key: string]: unknown;
-}
-
 // Move request
 export type MoveRequestStatus = 'pending' | 'thinking' | 'complete' | 'error';
 
