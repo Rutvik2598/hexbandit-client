@@ -4,12 +4,12 @@ import { useGameStore } from '@/store/gameStore';
 import { analyzeMoveStep } from '@/services/api/movesApi';
 
 export default function ReplayControls() {
-  const replayMode = useGameStore(s => s.replayMode);
-  const replayFrames = useGameStore(s => s.replayFrames);
-  const replayStep = useGameStore(s => s.replayStep);
-  const gameId = useGameStore(s => s.gameId);
+  const replayMode    = useGameStore(s => s.replayMode);
+  const replayFrames  = useGameStore(s => s.replayFrames);
+  const replayStep    = useGameStore(s => s.replayStep);
+  const gameId        = useGameStore(s => s.gameId);
   const setReplayStep = useGameStore(s => s.setReplayStep);
-  const setGameState = useGameStore(s => s.setGameState);
+  const setGameState  = useGameStore(s => s.setGameState);
   const setReplayAnalysis = useGameStore(s => s.setReplayAnalysis);
 
   const maxStep = replayFrames.length - 1;
@@ -18,10 +18,7 @@ export default function ReplayControls() {
     const clamped = Math.max(0, Math.min(step, maxStep));
     setReplayStep(clamped);
     const frame = replayFrames[clamped];
-    if (frame?.state) {
-      setGameState(frame.state);
-    }
-    // Fetch analysis for this step
+    if (frame?.state) setGameState(frame.state);
     if (gameId) {
       try {
         const analysis = await analyzeMoveStep({ game_id: gameId, step: clamped });
@@ -34,66 +31,114 @@ export default function ReplayControls() {
 
   if (!replayMode) return null;
 
-  const frame = replayFrames[replayStep];
+  const frame  = replayFrames[replayStep];
   const action = frame?.action;
+  const pct    = maxStep > 0 ? (replayStep / maxStep) * 100 : 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="bg-slate-900/95 border border-slate-700/50 rounded-xl p-3 space-y-2 backdrop-blur-sm"
+      exit={{ opacity: 0, y: 16 }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 10,
+        padding: '12px 14px',
+        minWidth: 280,
+      }}
     >
-      <div className="flex items-center justify-between text-xs text-slate-400">
-        <span className="font-semibold uppercase tracking-wider">Replay</span>
-        <span>Step {replayStep + 1} / {maxStep + 1}</span>
+      {/* header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{
+          fontFamily: 'var(--ff-display)', fontSize: 11, fontWeight: 700,
+          letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--amber-soft)',
+        }}>
+          Replay
+        </span>
+        <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-faint)' }}>
+          <span style={{ color: 'var(--text-dim)' }}>{replayStep + 1}</span>
+          {' / '}{maxStep + 1}
+        </span>
       </div>
 
-      {/* Current action */}
+      {/* current action label */}
       {action && (
-        <div className="text-xs text-slate-300 bg-slate-800/60 rounded-lg px-2 py-1.5">
-          <span className="text-slate-500">{action.color}: </span>
+        <div style={{
+          fontSize: 12, fontWeight: 600, color: 'var(--text-dim)',
+          background: 'rgba(255,255,255,0.04)', border: '1px solid var(--hairline)',
+          borderRadius: 8, padding: '6px 10px',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          <span style={{ color: 'var(--text-ghost)', marginRight: 6 }}>{action.color}:</span>
           {action.description || action.action_type}
         </div>
       )}
 
-      {/* Controls */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => goToStep(0)}
-          disabled={replayStep === 0}
-          className="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-slate-300 text-sm"
-          title="First"
-        >⏮</button>
-        <button
-          onClick={() => goToStep(replayStep - 1)}
-          disabled={replayStep === 0}
-          className="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-slate-300 text-sm"
-          title="Previous"
-        >◀</button>
-
-        {/* Slider */}
+      {/* scrubber */}
+      <div style={{ position: 'relative', height: 20, display: 'flex', alignItems: 'center' }}>
+        {/* track */}
+        <div style={{
+          position: 'absolute', left: 0, right: 0, height: 4,
+          borderRadius: 4, background: 'var(--glass-hi)',
+          border: '1px solid var(--hairline)',
+        }} />
+        {/* fill */}
+        <div style={{
+          position: 'absolute', left: 0, height: 4, borderRadius: 4,
+          width: `${pct}%`,
+          background: 'linear-gradient(90deg, var(--amber-deep), var(--amber-soft))',
+          boxShadow: '0 0 8px var(--amber-glow)',
+          transition: 'width 0.1s ease',
+          pointerEvents: 'none',
+        }} />
+        {/* native input (invisible, sits on top for interaction) */}
         <input
           type="range"
           min={0}
           max={maxStep}
           value={replayStep}
           onChange={e => goToStep(parseInt(e.target.value))}
-          className="flex-1 h-1.5 rounded-full appearance-none bg-slate-700 cursor-pointer"
+          style={{
+            position: 'absolute', inset: 0, width: '100%',
+            opacity: 0, cursor: 'pointer', margin: 0,
+          }}
         />
+        {/* thumb dot */}
+        <div style={{
+          position: 'absolute', left: `${pct}%`,
+          transform: 'translateX(-50%)',
+          width: 14, height: 14, borderRadius: '50%',
+          background: 'linear-gradient(180deg, var(--amber-soft), var(--amber))',
+          border: '2px solid var(--bg-0)',
+          boxShadow: '0 0 10px var(--amber-glow)',
+          pointerEvents: 'none',
+          transition: 'left 0.1s ease',
+        }} />
+      </div>
 
-        <button
-          onClick={() => goToStep(replayStep + 1)}
-          disabled={replayStep === maxStep}
-          className="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-slate-300 text-sm"
-          title="Next"
-        >▶</button>
-        <button
-          onClick={() => goToStep(maxStep)}
-          disabled={replayStep === maxStep}
-          className="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-slate-300 text-sm"
-          title="Last"
-        >⏭</button>
+      {/* transport buttons */}
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+        {[
+          { label: '⏮', title: 'First',    onClick: () => goToStep(0),              disabled: replayStep === 0 },
+          { label: '◀',  title: 'Previous', onClick: () => goToStep(replayStep - 1), disabled: replayStep === 0 },
+          { label: '▶',  title: 'Next',     onClick: () => goToStep(replayStep + 1), disabled: replayStep === maxStep },
+          { label: '⏭', title: 'Last',     onClick: () => goToStep(maxStep),        disabled: replayStep === maxStep },
+        ].map(btn => (
+          <button
+            key={btn.title}
+            onClick={btn.onClick}
+            disabled={btn.disabled}
+            title={btn.title}
+            className="btn"
+            style={{
+              flex: 1, padding: '7px 0', fontSize: 14,
+              display: 'grid', placeItems: 'center',
+              opacity: btn.disabled ? 0.3 : 1,
+            }}
+          >
+            {btn.label}
+          </button>
+        ))}
       </div>
     </motion.div>
   );

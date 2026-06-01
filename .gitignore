@@ -13,6 +13,9 @@ dist-ssr
 # Claude Code — local settings and memory, not for source control
 .claude/
 
+# Design prototypes — reference only, not part of the build
+Catan-design/
+
 # macOS
 .DS_Store
 

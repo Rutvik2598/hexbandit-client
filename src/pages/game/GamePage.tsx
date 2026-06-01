@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useUiStore } from '@/store/uiStore';
 import { useGameLoop } from '@/shared/hooks/useGameLoop';
@@ -16,6 +16,7 @@ import { BankPanel } from '@/features/bank/BankPanel';
 import { TradeModal } from '@/features/trade/TradeModal';
 import { FlyLayer, flyResource } from '@/shared/components/FlyLayer';
 import { PLAYER_COLORS, RESOURCE_ORDER } from '@/shared/constants';
+import { GameOverScreen } from '@/features/game-over/GameOverScreen';
 import type { PlayableAction, PlayerColor, DevCardType, ResourceCounts } from '@/shared/types/game';
 
 export default function GamePage() {
@@ -31,6 +32,7 @@ export default function GamePage() {
   const setHumanPlayers    = useGameStore(s => s.setHumanPlayers);
   const setPerspectiveColor = useGameStore(s => s.setPerspectiveColor);
   const reset              = useGameStore(s => s.reset);
+  const setGameState       = useGameStore(s => s.setGameState);
 
   const sidebarTab      = useUiStore(s => s.sidebarTab);
   const setSidebarTab   = useUiStore(s => s.setSidebarTab);
@@ -254,6 +256,16 @@ export default function GamePage() {
             </button>
           )}
 
+          {import.meta.env.DEV && gameState && !gameState.winner && (
+            <button
+              onClick={() => setGameState({ ...gameState, winner: gameState.players[0].color })}
+              className="btn"
+              style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, opacity: 0.5, borderStyle: 'dashed' }}
+            >
+              🏆 Test End
+            </button>
+          )}
+
           <button onClick={handleNewGame} className="btn" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700 }}>
             New Game
           </button>
@@ -386,45 +398,13 @@ export default function GamePage() {
       {/* ---- winner overlay ---------------------------------------------- */}
       <AnimatePresence>
         {gameState?.winner && !replayMode && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'absolute', inset: 0, zIndex: 50,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(4,8,16,0.55)', backdropFilter: 'blur(6px)',
-              WebkitBackdropFilter: 'blur(6px)',
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.88, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="panel"
-              style={{
-                textAlign: 'center', padding: '32px 40px',
-                background: 'var(--glass-2)', boxShadow: 'var(--sh-pop)',
-                borderRadius: 'var(--r-xl)',
-              }}
-            >
-              <div style={{ fontSize: 52, marginBottom: 10 }}>🏆</div>
-              <div style={{
-                fontFamily: 'var(--ff-display)', fontSize: 26, fontWeight: 700, marginBottom: 4,
-                color: PLAYER_COLORS[gameState.winner as PlayerColor] || 'var(--text)',
-              }}>
-                {gameState.winner} Wins!
-              </div>
-              <p style={{ color: 'var(--text-faint)', fontSize: 13, marginBottom: 20 }}>Game over</p>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button onClick={enterReplay} className="btn" style={{ padding: '11px 22px', fontSize: 13.5, fontWeight: 800, borderColor: 'rgba(160,130,235,0.5)', color: '#c4b5f5' }}>
-                  📼 Watch Replay
-                </button>
-                <button onClick={handleNewGame} className="btn btn-primary" style={{ padding: '11px 22px', fontSize: 13.5, fontWeight: 800 }}>
-                  New Game
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+          <GameOverScreen
+            gameState={gameState}
+            humanPlayerIndices={humanPlayerIndices}
+            onPlayAgain={handleNewGame}
+            onMenu={handleNewGame}
+            onReplay={enterReplay}
+          />
         )}
       </AnimatePresence>
 

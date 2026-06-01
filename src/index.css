@@ -190,6 +190,19 @@ button { font-family: var(--ff-ui); cursor: pointer; }
   to { transform: rotate(360deg); }
 }
 
+@keyframes confettiFall {
+  0%   { transform: translateY(-12vh) rotate(0deg); }
+  100% { transform: translateY(112vh) rotate(720deg); }
+}
+@keyframes crownGlow {
+  0%,100% { filter: drop-shadow(0 0 10px var(--amber-glow)) drop-shadow(0 6px 14px rgba(0,0,0,.5)); }
+  50%     { filter: drop-shadow(0 0 26px var(--amber-glow)) drop-shadow(0 6px 14px rgba(0,0,0,.5)); }
+}
+@keyframes winnerSheen {
+  0%          { background-position: -160% 0; }
+  60%, 100%   { background-position: 260% 0; }
+}
+
 @keyframes thinking-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
