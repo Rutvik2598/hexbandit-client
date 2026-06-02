@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
@@ -14,9 +14,11 @@ import ReplayControls from '@/features/replay-controls/ReplayControls';
 import { ResourceHand } from '@/features/resource-hand/ResourceHand';
 import { BankPanel } from '@/features/bank/BankPanel';
 import { TradeModal } from '@/features/trade/TradeModal';
+import { OfferTradeModal } from '@/features/trade/OfferTradeModal';
 import { FlyLayer, flyResource } from '@/shared/components/FlyLayer';
 import { PLAYER_COLORS, RESOURCE_ORDER } from '@/shared/constants';
 import { GameOverScreen } from '@/features/game-over/GameOverScreen';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import type { PlayableAction, PlayerColor, DevCardType, ResourceCounts } from '@/shared/types/game';
 
 export default function GamePage() {
@@ -32,18 +34,21 @@ export default function GamePage() {
   const setHumanPlayers    = useGameStore(s => s.setHumanPlayers);
   const setPerspectiveColor = useGameStore(s => s.setPerspectiveColor);
   const reset              = useGameStore(s => s.reset);
-  const setGameState       = useGameStore(s => s.setGameState);
 
   const sidebarTab      = useUiStore(s => s.sidebarTab);
   const setSidebarTab   = useUiStore(s => s.setSidebarTab);
-  const showTradeModal  = useUiStore(s => s.showTradeModal);
-  const setShowTradeModal = useUiStore(s => s.setShowTradeModal);
+  const showTradeModal       = useUiStore(s => s.showTradeModal);
+  const setShowTradeModal    = useUiStore(s => s.setShowTradeModal);
+  const showOfferTradeModal  = useUiStore(s => s.showOfferTradeModal);
+  const setShowOfferTradeModal = useUiStore(s => s.setShowOfferTradeModal);
 
   const {
     refreshState, evaluatePosition,
     submitAction, autoAdvanceAI, startAutoPlay, stopAutoPlay,
     isCurrentPlayerHuman, enterReplay, exitReplay, cleanup,
   } = useGameLoop();
+
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const initialized = useRef(false);
   const prevGains   = useRef(resourceGains);
@@ -144,6 +149,11 @@ export default function GamePage() {
   }, [submitAction]);
 
   const handleAction = useCallback(async (action: PlayableAction) => {
+    // Intercept sentinel — open offer-trade modal instead of submitting
+    if (action.action_type === 'OFFER_TRADE' && action.value === '__open_modal__') {
+      setShowOfferTradeModal(true);
+      return;
+    }
     // Trigger fly-out animation for spend actions
     if (action.action_type === 'MARITIME_TRADE' && Array.isArray(action.value)) {
       const val = action.value as (number | null)[];
@@ -154,15 +164,30 @@ export default function GamePage() {
       }
     }
     await submitAction(action);
-  }, [submitAction]);
+  }, [submitAction, setShowOfferTradeModal]);
 
-  const handleNewGame = useCallback(async () => {
+  const confirmNewGame = useCallback(async () => {
+    setShowExitConfirm(false);
     stopAutoPlay();
     await cleanup();
     reset();
     initialized.current = false;
     navigate('/');
   }, [stopAutoPlay, cleanup, reset, navigate]);
+
+  const handleNewGame = useCallback(() => {
+    setShowExitConfirm(true);
+  }, []);
+
+  // Warn on accidental refresh / tab close while a game is running
+  useEffect(() => {
+    if (!gameId) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [gameId]);
 
   if (!gameId) return null;
 
@@ -256,17 +281,7 @@ export default function GamePage() {
             </button>
           )}
 
-          {import.meta.env.DEV && gameState && !gameState.winner && (
-            <button
-              onClick={() => setGameState({ ...gameState, winner: gameState.players[0].color })}
-              className="btn"
-              style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, opacity: 0.5, borderStyle: 'dashed' }}
-            >
-              🏆 Test End
-            </button>
-          )}
-
-          <button onClick={handleNewGame} className="btn" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700 }}>
+<button onClick={handleNewGame} className="btn" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700 }}>
             New Game
           </button>
         </div>
@@ -327,7 +342,7 @@ export default function GamePage() {
           flexShrink: 0, display: 'flex', borderRadius: 10, overflow: 'hidden',
           background: 'var(--bg-1)', border: '1px solid var(--hairline)',
         }}>
-          {(['players', 'log', 'analysis'] as const).map(tab => (
+          {(['players', 'analysis'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setSidebarTab(tab)}
@@ -351,18 +366,14 @@ export default function GamePage() {
             <>
               <PlayerPanel />
               <div style={{ height: 1, background: 'var(--hairline)', flexShrink: 0 }} />
+              <GameLog />
+              <div style={{ height: 1, background: 'var(--hairline)', flexShrink: 0 }} />
               <BankPanel
                 bank={bankResources}
                 canTrade={canTrade}
                 onTrade={() => setShowTradeModal(true)}
               />
             </>
-          )}
-
-          {sidebarTab === 'log' && (
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              <GameLog />
-            </div>
           )}
 
           {sidebarTab === 'analysis' && (
@@ -408,7 +419,7 @@ export default function GamePage() {
         )}
       </AnimatePresence>
 
-      {/* ---- trade modal ------------------------------------------------- */}
+      {/* ---- maritime trade modal --------------------------------------- */}
       {showTradeModal && gameState && (
         <TradeModal
           hand={humanPlayer?.resources ?? {} as ResourceCounts}
@@ -418,6 +429,28 @@ export default function GamePage() {
           onClose={() => setShowTradeModal(false)}
         />
       )}
+
+      {/* ---- offer trade modal ------------------------------------------ */}
+      {showOfferTradeModal && gameState && humanPlayer && (
+        <OfferTradeModal
+          hand={humanPlayer.resources}
+          players={gameState.players.map((p, i) => ({ name: p.name, color: p.color, index: i }))}
+          onConfirm={handleAction}
+          onClose={() => setShowOfferTradeModal(false)}
+        />
+      )}
+
+      {/* ---- exit confirmation ------------------------------------------- */}
+      <ConfirmModal
+        open={showExitConfirm}
+        title="Leave Game?"
+        message="Your current game will be lost. Are you sure you want to exit?"
+        confirmLabel="Leave"
+        cancelLabel="Keep Playing"
+        danger
+        onConfirm={confirmNewGame}
+        onCancel={() => setShowExitConfirm(false)}
+      />
     </div>
   );
 }

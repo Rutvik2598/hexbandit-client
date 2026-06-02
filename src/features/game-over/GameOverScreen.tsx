@@ -135,10 +135,9 @@ function VpChip({ chip }: { chip: VpChip }) {
   );
 }
 
-function StandingRow({ ranked, humanLost, totalPlayers }: {
+function StandingRow({ ranked, humanLost }: {
   ranked: RankedPlayer;
   humanLost: boolean;
-  totalPlayers: number;
 }) {
   const { player, rank, breakdown, isHuman } = ranked;
   const color = PLAYER_COLORS[player.color as PlayerColor] || '#ccc';
@@ -347,7 +346,7 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
         <div className="panel" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div className="eyebrow" style={{ padding: '4px 6px 2px' }}>Final Standings</div>
           {ranked.map(r => (
-            <StandingRow key={r.player.color} ranked={r} humanLost={humanLost} totalPlayers={gameState.players.length} />
+            <StandingRow key={r.player.color} ranked={r} humanLost={humanLost} />
           ))}
         </div>
 

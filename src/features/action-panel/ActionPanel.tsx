@@ -18,8 +18,9 @@ import { Icon } from '@/shared/components/Icon';
 import {
   RESOURCE_ORDER,
   RESOURCE_LABELS,
+  PLAYER_COLORS,
 } from '@/shared/constants';
-import type { PlayableAction, ResourceType } from '@/shared/types/game';
+import type { PlayableAction, PlayerColor, ResourceType } from '@/shared/types/game';
 
 // ---- build cost catalogue -----------------------------------------------
 
@@ -44,19 +45,21 @@ interface BuildButtonProps {
   resources: Record<string, number>;
   rolled: boolean;
   isMyTurn: boolean;
+  available: boolean;
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
 }
 
-function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, active, disabled, onClick }: BuildButtonProps) {
+function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, available, active, disabled, onClick }: BuildButtonProps) {
   const [hover, setHover] = useState(false);
   const afford = canAfford(resources, cost);
-  const ready  = afford && rolled && isMyTurn && !disabled;
+  // Clickable only when it's your turn, rolled, server allows it, and you can afford it
+  const ready  = afford && rolled && isMyTurn && available && !disabled;
 
   const bg = hover && ready
     ? 'var(--bg-3)'
-    : ready
+    : afford && isMyTurn
     ? 'var(--glass-2)'
     : 'rgba(255,255,255,0.025)';
 
@@ -70,12 +73,12 @@ function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, activ
         display: 'flex', alignItems: 'center', gap: 10, width: '100%',
         padding: '8px 10px', borderRadius: 11,
         background: active ? 'var(--glass-hi)' : bg,
-        border: `1px solid ${active ? 'var(--sapphire-bright)' : ready ? 'var(--glass-brd2)' : 'var(--hairline)'}`,
+        border: `1px solid ${active ? 'var(--sapphire-bright)' : afford && isMyTurn ? 'var(--glass-brd2)' : 'var(--hairline)'}`,
         color: afford ? 'var(--text)' : 'var(--text-faint)',
-        textAlign: 'left', cursor: ready ? 'pointer' : 'not-allowed',
+        textAlign: 'left', cursor: ready ? 'pointer' : 'default',
         transition: 'background 0.15s, border-color 0.15s, transform 0.12s',
         transform: hover && ready ? 'translateY(-1px)' : 'none',
-        opacity: afford ? 1 : 0.6,
+        opacity: isMyTurn ? (afford ? 1 : 0.55) : 0.4,
         outline: active ? '2px solid var(--sapphire-bright)' : 'none',
         outlineOffset: 1,
       }}
@@ -105,11 +108,13 @@ function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, activ
         </span>
       </span>
 
-      {/* ready dot */}
-      {ready && (
+      {/* amber dot — shows whenever you can afford it (your turn or not) */}
+      {afford && (
         <span style={{
-          width: 7, height: 7, borderRadius: '50%',
-          background: 'var(--amber)', boxShadow: '0 0 8px var(--amber-glow)', flexShrink: 0,
+          width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+          background: 'var(--amber)',
+          boxShadow: isMyTurn ? '0 0 8px var(--amber-glow)' : 'none',
+          opacity: isMyTurn ? 1 : 0.4,
         }} />
       )}
     </button>
@@ -118,7 +123,7 @@ function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, activ
 
 // ---- DiscardPanel --------------------------------------------------------
 
-function DiscardPanel({ onAction, disabled }: { onAction: (a: PlayableAction) => void; disabled?: boolean }) {
+function DiscardPanel({ onAction, disabled }: { onAction: (_: PlayableAction) => void; disabled?: boolean }) {
   const gameState = useGameStore(s => s.gameState);
   const [selected, setSelected] = useState<Partial<Record<ResourceType, number>>>({});
 
@@ -129,53 +134,95 @@ function DiscardPanel({ onAction, disabled }: { onAction: (a: PlayableAction) =>
   const required = Math.floor(total / 2);
   const chosen   = Object.values(selected).reduce((a, b) => a + b, 0);
   const remaining = required - chosen;
+  const done = chosen === required;
 
   const inc = (res: ResourceType) => {
-    if ((selected[res] ?? 0) < player.resources[res] && chosen < required) {
+    if ((selected[res] ?? 0) < player.resources[res] && chosen < required)
       setSelected(s => ({ ...s, [res]: (s[res] ?? 0) + 1 }));
-    }
   };
   const dec = (res: ResourceType) => {
-    if ((selected[res] ?? 0) > 0) {
+    if ((selected[res] ?? 0) > 0)
       setSelected(s => ({ ...s, [res]: (s[res] ?? 0) - 1 }));
-    }
   };
 
   return (
-    <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--p-red)' }}>
-        Discard {required} cards {remaining > 0 ? `(${remaining} more)` : '✓'}
+    <div className="panel" style={{ padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+
+      {/* header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--p-red)' }}>
+          Discard {required}
+        </span>
+        <span style={{
+          fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+          background: done ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.12)',
+          color: done ? '#4ade80' : '#f87171',
+          border: `1px solid ${done ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.25)'}`,
+        }}>
+          {done ? '✓ Ready' : `${remaining} left`}
+        </span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+
+      {/* resource rows — single column */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         {RESOURCE_ORDER.map(res => {
           const inHand = player.resources[res];
-          const count  = selected[res] ?? 0;
           if (inHand === 0) return null;
+          const count = selected[res] ?? 0;
+          const canInc = count < inHand && chosen < required;
+          const canDec = count > 0;
+
           return (
             <div key={res} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '5px 8px',
-              border: '1px solid var(--hairline)',
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '6px 8px', borderRadius: 9,
+              background: count > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${count > 0 ? 'rgba(239,68,68,0.3)' : 'var(--hairline)'}`,
+              transition: 'all 0.15s',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <ResourceIcon type={res} size={14} shadow={false} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)' }}>{count}/{inHand}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 3 }}>
-                <button onClick={() => dec(res)} disabled={count === 0}
-                  style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--glass-hi)', border: '1px solid var(--glass-brd)', color: 'var(--text)', fontSize: 13, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>−</button>
-                <button onClick={() => inc(res)} disabled={count >= inHand || chosen >= required}
-                  style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--glass-hi)', border: '1px solid var(--glass-brd)', color: 'var(--text)', fontSize: 13, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>+</button>
+              <ResourceIcon type={res} size={16} shadow={false} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)', flex: 1 }}>
+                {RESOURCE_LABELS[res]}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', minWidth: 28, textAlign: 'right' }}>
+                {count > 0 ? <span style={{ color: '#f87171' }}>{count}</span> : null}
+                <span style={{ color: 'var(--text-ghost)' }}>/{inHand}</span>
+              </span>
+              <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                <button
+                  onClick={() => dec(res)} disabled={!canDec}
+                  style={{
+                    width: 22, height: 22, borderRadius: 6, fontSize: 14, lineHeight: 1,
+                    background: canDec ? 'var(--glass-hi)' : 'transparent',
+                    border: `1px solid ${canDec ? 'var(--glass-brd2)' : 'var(--hairline)'}`,
+                    color: canDec ? 'var(--text)' : 'var(--text-ghost)',
+                    cursor: canDec ? 'pointer' : 'not-allowed',
+                    display: 'grid', placeItems: 'center',
+                  }}
+                >−</button>
+                <button
+                  onClick={() => inc(res)} disabled={!canInc}
+                  style={{
+                    width: 22, height: 22, borderRadius: 6, fontSize: 14, lineHeight: 1,
+                    background: canInc ? 'var(--glass-hi)' : 'transparent',
+                    border: `1px solid ${canInc ? 'var(--glass-brd2)' : 'var(--hairline)'}`,
+                    color: canInc ? 'var(--text)' : 'var(--text-ghost)',
+                    cursor: canInc ? 'pointer' : 'not-allowed',
+                    display: 'grid', placeItems: 'center',
+                  }}
+                >+</button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* confirm button */}
       <button
         onClick={() => onAction({ action_type: 'DISCARD', value: RESOURCE_ORDER.map(r => selected[r] ?? 0) })}
-        disabled={disabled || chosen !== required}
-        className={`btn${chosen === required ? ' btn-primary' : ''}`}
-        style={{ padding: '10px 0', fontSize: 13, fontWeight: 800, width: '100%' }}
+        disabled={disabled || !done}
+        className={`btn${done ? ' btn-primary' : ''}`}
+        style={{ padding: '9px 0', fontSize: 12.5, fontWeight: 800, width: '100%', opacity: done ? 1 : 0.45 }}
       >
         Discard {required} Cards
       </button>
@@ -187,7 +234,7 @@ function DiscardPanel({ onAction, disabled }: { onAction: (a: PlayableAction) =>
 
 function ResourcePicker({
   title, onPick, onCancel, disabled,
-}: { title: string; onPick: (r: ResourceType) => void; onCancel: () => void; disabled?: boolean }) {
+}: { title: string; onPick: (_: ResourceType) => void; onCancel: () => void; disabled?: boolean }) {
   return (
     <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)' }}>{title}</div>
@@ -217,16 +264,119 @@ function ResourcePicker({
   );
 }
 
-// ---- TradeResponse -------------------------------------------------------
+// ---- TradeTerms — parse and display current_trade from game state ----------
 
-function TradeResponse({ onAction, disabled, actions }: {
-  onAction: (a: PlayableAction) => void; disabled?: boolean; actions: PlayableAction[];
-  trade?: number[];
+function TradeTerms({ trade, offererName, offererColor }: {
+  trade: number[];
+  offererName: string;
+  offererColor: string;
 }) {
-  const hasAccept  = actions.some(a => a.action_type === 'ACCEPT_TRADE');
-  const hasReject  = actions.some(a => a.action_type === 'REJECT_TRADE');
-  const hasConfirm = actions.some(a => a.action_type === 'CONFIRM_TRADE');
-  const hasCancel  = actions.some(a => a.action_type === 'CANCEL_TRADE');
+  const offered = RESOURCE_ORDER.map((r, i) => ({ r, n: trade[i] ?? 0 })).filter(x => x.n > 0);
+  const wanted  = RESOURCE_ORDER.map((r, i) => ({ r, n: trade[i + 5] ?? 0 })).filter(x => x.n > 0);
+  const color   = PLAYER_COLORS[offererColor as PlayerColor] || '#ccc';
+
+  return (
+    <div style={{
+      padding: '8px 10px', borderRadius: 9,
+      background: 'rgba(255,255,255,0.04)', border: '1px solid var(--hairline)',
+      display: 'flex', flexDirection: 'column', gap: 6,
+    }}>
+      <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text-faint)', textTransform: 'uppercase' }}>
+        <span style={{ color, fontWeight: 800 }}>{offererName}</span> offers
+      </div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* gives */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          {offered.length > 0
+            ? offered.map(({ r, n }) => (
+                <span key={r} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <ResourceIcon type={r} size={14} shadow={false} />
+                  <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--sapphire-bright)' }}>{n}</span>
+                </span>
+              ))
+            : <span style={{ fontSize: 11, color: 'var(--text-ghost)' }}>nothing</span>
+          }
+        </div>
+        <Icon name="swap" size={13} color="var(--text-ghost)" />
+        {/* wants */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          {wanted.length > 0
+            ? wanted.map(({ r, n }) => (
+                <span key={r} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <ResourceIcon type={r} size={14} shadow={false} />
+                  <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--amber-soft)' }}>{n}</span>
+                </span>
+              ))
+            : <span style={{ fontSize: 11, color: 'var(--text-ghost)' }}>nothing</span>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- TradeResponse — accept/reject/cancel for non-offerers ----------------
+
+function TradeResponse({ onAction, disabled, actions, trade, players, offererIdx }: {
+  onAction: (_: PlayableAction) => void;
+  disabled?: boolean;
+  actions: PlayableAction[];
+  trade: number[];
+  players: Array<{ name: string; color: string }>;
+  offererIdx: number;
+}) {
+  const hasAccept = actions.some(a => a.action_type === 'ACCEPT_TRADE');
+  const hasReject = actions.some(a => a.action_type === 'REJECT_TRADE');
+  const hasCancel = actions.some(a => a.action_type === 'CANCEL_TRADE');
+
+  const act = (type: string) => {
+    const a = actions.find(x => x.action_type === type);
+    if (a) onAction(a);
+  };
+
+  const offerer = players[offererIdx];
+
+  return (
+    <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div className="eyebrow">Trade Offer</div>
+      {offerer && trade.length >= 10 && (
+        <TradeTerms trade={trade} offererName={offerer.name} offererColor={offerer.color} />
+      )}
+      <div style={{ display: 'flex', gap: 7 }}>
+        {hasAccept && (
+          <button onClick={() => act('ACCEPT_TRADE')} disabled={disabled}
+            className="btn btn-primary" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800 }}>
+            ✓ Accept
+          </button>
+        )}
+        {hasReject && (
+          <button onClick={() => act('REJECT_TRADE')} disabled={disabled}
+            className="btn" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800, borderColor: 'rgba(220,60,60,0.4)', color: '#f87171' }}>
+            ✗ Reject
+          </button>
+        )}
+        {hasCancel && (
+          <button onClick={() => act('CANCEL_TRADE')} disabled={disabled}
+            className="btn" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800 }}>
+            ✗ Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---- DecideAccepteesPanel — offerer picks who to confirm with --------------
+
+function DecideAccepteesPanel({ onAction, disabled, actions, trade, players }: {
+  onAction: (_: PlayableAction) => void;
+  disabled?: boolean;
+  actions: PlayableAction[];
+  trade: number[];
+  players: Array<{ name: string; color: string }>;
+}) {
+  const confirmActions = actions.filter(a => a.action_type === 'CONFIRM_TRADE');
+  const hasCancel = actions.some(a => a.action_type === 'CANCEL_TRADE');
 
   const act = (type: string) => {
     const a = actions.find(x => x.action_type === type);
@@ -235,15 +385,51 @@ function TradeResponse({ onAction, disabled, actions }: {
 
   return (
     <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-        Trade Response
+      <div className="eyebrow">Choose Trade Partner</div>
+      {trade.length >= 10 && players[trade[10]] && (
+        <TradeTerms trade={trade} offererName="You" offererColor={players[trade[10]]?.color ?? ''} />
+      )}
+      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)' }}>
+        These players accepted — pick one to trade with:
       </div>
-      <div style={{ display: 'flex', gap: 7 }}>
-        {hasAccept  && <button onClick={() => act('ACCEPT_TRADE')}  disabled={disabled} className="btn btn-primary" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800 }}>✓ Accept</button>}
-        {hasReject  && <button onClick={() => act('REJECT_TRADE')}  disabled={disabled} className="btn" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800, borderColor: 'rgba(220,60,60,0.4)', color: '#f87171' }}>✗ Reject</button>}
-        {hasConfirm && <button onClick={() => act('CONFIRM_TRADE')} disabled={disabled} className="btn btn-amber" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800 }}>🤝 Confirm</button>}
-        {hasCancel  && <button onClick={() => act('CANCEL_TRADE')}  disabled={disabled} className="btn" style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800 }}>✗ Cancel</button>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {confirmActions.map((action) => {
+          const val = Array.isArray(action.value) ? action.value as (string | number)[] : [];
+          const counterpartyColor = val[val.length - 1] as string;
+          const counterparty = players.find(p => p.color === counterpartyColor);
+          const hex = PLAYER_COLORS[counterpartyColor as PlayerColor] || '#ccc';
+          return (
+            <button
+              key={counterpartyColor}
+              onClick={() => !disabled && onAction(action)}
+              disabled={disabled}
+              className="btn"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 9,
+                padding: '9px 12px', textAlign: 'left',
+                borderColor: hex, background: `color-mix(in srgb, ${hex} 10%, rgba(255,255,255,0.03))`,
+              }}
+            >
+              <span style={{
+                width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+                background: hex, boxShadow: `0 0 8px ${hex}`,
+              }} />
+              <span style={{ fontWeight: 800, fontSize: 13, color: 'var(--text)' }}>
+                {counterparty?.name ?? counterpartyColor}
+              </span>
+              <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--amber-soft)', fontWeight: 700 }}>
+                Confirm →
+              </span>
+            </button>
+          );
+        })}
       </div>
+      {hasCancel && (
+        <button onClick={() => act('CANCEL_TRADE')} disabled={disabled}
+          className="btn" style={{ padding: '8px 0', fontSize: 12, fontWeight: 700, width: '100%' }}>
+          Cancel Trade
+        </button>
+      )}
     </div>
   );
 }
@@ -251,7 +437,7 @@ function TradeResponse({ onAction, disabled, actions }: {
 // ---- Main ActionPanel ----------------------------------------------------
 
 export interface ActionPanelProps {
-  onAction: (action: PlayableAction) => void;
+  onAction: (_: PlayableAction) => void;
   disabled?: boolean;
 }
 
@@ -270,9 +456,11 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
 
   const playableActions = gameState?.playable_actions ?? [];
   const phase = gameState?.game_phase;
-  const currentPlayer  = gameState?.players[gameState.current_player_index];
-  const resources      = currentPlayer?.resources ?? {};
   const isHumanTurn    = humanIndices.includes(gameState?.current_player_index ?? -1);
+  const currentPlayer  = gameState?.players[gameState.current_player_index];
+  // Always use the human player's resources for affordability display
+  const humanPlayer    = gameState?.players[humanIndices[0] ?? -1];
+  const resources      = humanPlayer?.resources ?? {};
 
   const hasRoll       = playableActions.some(a => a.action_type === 'ROLL');
   const hasEndTurn    = playableActions.some(a => a.action_type === 'END_TURN');
@@ -286,9 +474,16 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
   const hasPlayRoadBuilding = playableActions.some(a => a.action_type === 'PLAY_ROAD_BUILDING');
   const hasDiscard    = phase === 'DISCARDING';
   const hasMoveRobber = phase === 'MOVING_ROBBER';
-  const hasTradeResponse = playableActions.some(a =>
+  const isDecideAcceptees = phase === 'DECIDE_ACCEPTEES';
+  const hasTradeResponse = !isDecideAcceptees && playableActions.some(a =>
     a.action_type === 'ACCEPT_TRADE' || a.action_type === 'REJECT_TRADE' ||
-    a.action_type === 'CONFIRM_TRADE' || a.action_type === 'CANCEL_TRADE');
+    a.action_type === 'CANCEL_TRADE');
+  const isOfferTradeAllowed = !!(gameState?.is_trade_allowed) && isHumanTurn && !disabled;
+
+  // current_trade: [give×5, want×5, offererIdx]
+  const currentTrade = gameState?.current_trade ?? [];
+  const offererIdx   = currentTrade[10] ?? 0;
+  const playersList  = (gameState?.players ?? []).map(p => ({ name: p.name, color: p.color }));
 
   const rolled = !hasRoll && !!lastRollDice;
 
@@ -337,18 +532,13 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
 
   if (!gameState) return null;
 
-  const buildActions = [
-    hasBuildSettlement && { key: 'settlement', label: 'Settlement', iconName: 'settlement' as const, cost: BUILD_COSTS.settlement, modeKey: 'BUILD_SETTLEMENT' as const },
-    hasBuildCity      && { key: 'city',       label: 'City',       iconName: 'city'       as const, cost: BUILD_COSTS.city,       modeKey: 'BUILD_CITY'       as const },
-    hasBuildRoad      && { key: 'road',        label: 'Road',       iconName: 'road'       as const, cost: BUILD_COSTS.road,       modeKey: 'BUILD_ROAD'       as const },
-    hasBuyDev         && { key: 'devcard',     label: 'Buy Dev Card', iconName: 'devcard'  as const, cost: BUILD_COSTS.devcard,    modeKey: null               as null  },
-  ].filter(Boolean) as Array<{
-    key: string; label: string; iconName: 'settlement' | 'city' | 'road' | 'devcard';
-    cost: Partial<Record<ResourceType, number>>;
-    modeKey: 'BUILD_SETTLEMENT' | 'BUILD_CITY' | 'BUILD_ROAD' | null;
-  }>;
-
-  const visibleBuilds = isHumanTurn ? buildActions : [];
+  // Always show all 4 build types; `available` gates clickability (server must allow it)
+  const allBuildActions = [
+    { key: 'settlement', label: 'Settlement',   iconName: 'settlement' as const, cost: BUILD_COSTS.settlement, modeKey: 'BUILD_SETTLEMENT' as const, available: hasBuildSettlement },
+    { key: 'city',       label: 'City',         iconName: 'city'       as const, cost: BUILD_COSTS.city,       modeKey: 'BUILD_CITY'       as const, available: hasBuildCity       },
+    { key: 'road',       label: 'Road',         iconName: 'road'       as const, cost: BUILD_COSTS.road,       modeKey: 'BUILD_ROAD'       as const, available: hasBuildRoad       },
+    { key: 'devcard',    label: 'Buy Dev Card', iconName: 'devcard'    as const, cost: BUILD_COSTS.devcard,    modeKey: null               as null,  available: hasBuyDev           },
+  ];
 
   const devActions = [
     hasPlayKnight       && { type: 'PLAY_KNIGHT_CARD'    as const, label: 'Knight',        icon: 'army-badge' as const },
@@ -370,6 +560,7 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
     };
     if (hasDiscard) return { eyebrow: 'Action Required', eyebrowPulse: false, text: 'Choose cards to discard', textColor: 'var(--p-red)' as string, progress: null };
     if (hasMoveRobber) return { eyebrow: 'Place Robber', eyebrowPulse: false, text: 'Click a tile to move the robber', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (isDecideAcceptees) return { eyebrow: 'Trade', eyebrowPulse: false, text: 'Pick who to trade with', textColor: 'var(--amber-soft)' as string, progress: null };
     if (hasTradeResponse) return { eyebrow: 'Trade Offer', eyebrowPulse: false, text: 'Respond to the trade offer', textColor: 'var(--amber-soft)' as string, progress: null };
     if (phase === 'INITIAL_BUILD' && hasBuildSettlement) return { eyebrow: 'Setup Phase', eyebrowPulse: false, text: 'Place your settlement on a corner', textColor: '#6ee7b7' as string, progress: null };
     if (phase === 'INITIAL_BUILD' && hasBuildRoad) return { eyebrow: 'Setup Phase', eyebrowPulse: false, text: 'Place a road next to your settlement', textColor: '#6ee7b7' as string, progress: null };
@@ -416,8 +607,17 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
 
       {/* Special phase panels — only shown during human's turn */}
       {isHumanTurn && hasDiscard && <DiscardPanel onAction={onAction} disabled={disabled} />}
+      {isHumanTurn && isDecideAcceptees && (
+        <DecideAccepteesPanel
+          onAction={onAction} disabled={disabled} actions={playableActions}
+          trade={currentTrade} players={playersList}
+        />
+      )}
       {isHumanTurn && hasTradeResponse && (
-        <TradeResponse onAction={onAction} disabled={disabled} actions={playableActions} />
+        <TradeResponse
+          onAction={onAction} disabled={disabled} actions={playableActions}
+          trade={currentTrade} players={playersList} offererIdx={offererIdx}
+        />
       )}
 
       {/* YoP picker */}
@@ -487,13 +687,37 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
             End Turn
           </button>
         )}
+
       </div>
 
-      {/* Build column — visible on human's turn OR when human can afford something during AI turns */}
-      {visibleBuilds.length > 0 && (
+      {/* Offer Trade — standalone button, only when server allows it */}
+      {isHumanTurn && !hasDiscard && !hasMoveRobber && !isDecideAcceptees && !hasTradeResponse && (
+        <div className="panel" style={{ padding: '10px 12px' }}>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Player Trade</div>
+          <button
+            onClick={() => onAction({ action_type: 'OFFER_TRADE', value: '__open_modal__' })}
+            disabled={!isOfferTradeAllowed}
+            className="btn"
+            style={{
+              width: '100%', padding: '9px 0', fontSize: 12.5,
+              fontFamily: 'var(--ff-display)', fontWeight: 700, letterSpacing: '0.04em',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              borderColor: isOfferTradeAllowed ? 'rgba(63,135,242,0.45)' : 'var(--hairline)',
+              color: isOfferTradeAllowed ? 'var(--sapphire-bright)' : 'var(--text-ghost)',
+              opacity: isOfferTradeAllowed ? 1 : 0.5,
+            }}
+          >
+            <Icon name="swap" size={14} color={isOfferTradeAllowed ? 'var(--sapphire-bright)' : 'var(--text-ghost)'} />
+            {isOfferTradeAllowed ? 'Offer Trade' : 'Roll first'}
+          </button>
+        </div>
+      )}
+
+      {/* Build column — always visible so layout stays stable */}
+      {!hasDiscard && !hasMoveRobber && !isDecideAcceptees && (
         <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
           <div className="eyebrow" style={{ padding: '0 1px 1px' }}>Build</div>
-          {visibleBuilds.map(b => (
+          {allBuildActions.map(b => (
             <BuildButton
               key={b.key}
               label={b.label}
@@ -502,6 +726,7 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
               resources={resources}
               rolled={rolled}
               isMyTurn={isHumanTurn}
+              available={b.available}
               active={b.modeKey ? mode === b.modeKey : false}
               disabled={disabled}
               onClick={() => {

@@ -1,6 +1,7 @@
-import { Suspense, useMemo, useCallback, useEffect } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Suspense, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, useTexture } from '@react-three/drei';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import { useGameStore } from '@/store/gameStore';
 import { useInteractionStore } from '@/store/interactionStore';
@@ -20,7 +21,7 @@ import Port3D from './Port3D';
 import type { PlayableAction, PlayerColor } from '@/shared/types/game';
 
 interface GameBoard3DProps {
-  onAction?: (action: PlayableAction) => void;
+  onAction?: (_: PlayableAction) => void;
   disabled?: boolean;
 }
 
@@ -186,11 +187,26 @@ function SidebarAwareCamera({ sidebarWidth }: { sidebarWidth: number }) {
 
 // ── Board scene ────────────────────────────────────────────────────────────────
 interface BoardSceneProps {
-  onAction?: (action: PlayableAction) => void;
+  onAction?: (_: PlayableAction) => void;
   disabled?: boolean;
 }
 
+// Clamps the OrbitControls target so panning can't go further than the board edge
+function PanClamp({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl | null> }) {
+  useFrame(() => {
+    const ctrl = controlsRef.current;
+    if (!ctrl) return;
+    const t = ctrl.target;
+    const LIMIT = 9;
+    t.x = Math.max(-LIMIT, Math.min(LIMIT, t.x));
+    t.z = Math.max(-LIMIT, Math.min(LIMIT, t.z));
+    t.y = 0;
+  });
+  return null;
+}
+
 function BoardScene({ onAction, disabled }: BoardSceneProps) {
+  const controlsRef = useRef<OrbitControlsImpl>(null);
 
   const gameState = useGameStore(s => s.gameState);
   const replayMode = useGameStore(s => s.replayMode);
@@ -341,12 +357,18 @@ function BoardScene({ onAction, disabled }: BoardSceneProps) {
       <pointLight position={[0, 3, 0]} intensity={0.3} color="#8080ff" decay={2} />
 
       <OrbitControls
+        ref={controlsRef}
         enableRotate={false}
-        enablePan={false}
+        enablePan={true}
+        screenSpacePanning={false}
+        panSpeed={0.8}
         minDistance={5}
         maxDistance={24}
+        mouseButtons={{ LEFT: 2, MIDDLE: 1, RIGHT: 2 }}
+        touches={{ ONE: 2, TWO: 1 }}
         target={[0, 0, 0]}
       />
+      <PanClamp controlsRef={controlsRef} />
 
       <Ocean />
       <BeachBorder />
