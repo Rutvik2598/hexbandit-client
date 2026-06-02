@@ -26,6 +26,7 @@ interface Props {
   onPlayAgain: () => void;
   onMenu: () => void;
   onReplay: () => void;
+  replayLoading?: boolean;
 }
 
 // ---- helpers ----------------------------------------------------------------
@@ -233,7 +234,7 @@ function StandingRow({ ranked, humanLost }: {
 
 // ---- main component ---------------------------------------------------------
 
-export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onMenu, onReplay }: Props) {
+export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onMenu, onReplay, replayLoading }: Props) {
   const humanColorSet = useMemo(() => new Set(
     humanPlayerIndices.map(i => gameState.players[i]?.color)
   ), [gameState.players, humanPlayerIndices]);
@@ -357,10 +358,16 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
           </button>
           <button
             onClick={onReplay}
+            disabled={replayLoading}
             className="btn"
-            style={{ padding: '14px 26px', fontSize: 14.5, fontWeight: 700, fontFamily: 'var(--ff-display)', letterSpacing: '0.04em', borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5' }}
+            style={{ padding: '14px 26px', fontSize: 14.5, fontWeight: 700, fontFamily: 'var(--ff-display)', letterSpacing: '0.04em', borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5', display: 'flex', alignItems: 'center', gap: 8, opacity: replayLoading ? 0.7 : 1 }}
           >
-            📼 Replay
+            {replayLoading ? (
+              <>
+                <span style={{ width: 15, height: 15, borderRadius: '50%', border: '2px solid #c4b5f5', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+                Loading…
+              </>
+            ) : '📼 Replay'}
           </button>
           <button onClick={onPlayAgain} className="btn btn-primary" style={{ padding: '14px 32px', fontSize: 14.5, fontWeight: 700, fontFamily: 'var(--ff-display)', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 10 }}>
             <Icon name="dice" size={17} color="#fff" />

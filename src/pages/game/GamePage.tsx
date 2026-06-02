@@ -48,6 +48,18 @@ export default function GamePage() {
     isCurrentPlayerHuman, enterReplay, exitReplay, cleanup,
   } = useGameLoop();
 
+  const [replayLoading, setReplayLoading] = useState(false);
+
+  const handleEnterReplay = useCallback(async () => {
+    setReplayLoading(true);
+    try {
+      await enterReplay();
+      setSidebarTab('analysis');
+    } finally {
+      setReplayLoading(false);
+    }
+  }, [enterReplay, setSidebarTab]);
+
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const initialized = useRef(false);
@@ -270,8 +282,18 @@ export default function GamePage() {
 
 
           {gameState?.winner && !replayMode && (
-            <button onClick={enterReplay} className="btn" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5' }}>
-              📼 Replay
+            <button
+              onClick={handleEnterReplay}
+              disabled={replayLoading}
+              className="btn"
+              style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5', display: 'flex', alignItems: 'center', gap: 7, opacity: replayLoading ? 0.7 : 1 }}
+            >
+              {replayLoading ? (
+                <>
+                  <span className="thinking-pulse" style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #c4b5f5', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                  Loading…
+                </>
+              ) : '📼 Replay'}
             </button>
           )}
 
@@ -414,7 +436,8 @@ export default function GamePage() {
             humanPlayerIndices={humanPlayerIndices}
             onPlayAgain={handleNewGame}
             onMenu={handleNewGame}
-            onReplay={enterReplay}
+            onReplay={handleEnterReplay}
+            replayLoading={replayLoading}
           />
         )}
       </AnimatePresence>

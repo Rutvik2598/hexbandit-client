@@ -8,26 +8,45 @@ export default function ReplayControls() {
   const replayFrames  = useGameStore(s => s.replayFrames);
   const replayStep    = useGameStore(s => s.replayStep);
   const gameId        = useGameStore(s => s.gameId);
+  const gameState     = useGameStore(s => s.gameState);
+  const humanIndices  = useGameStore(s => s.humanPlayerIndices);
   const setReplayStep = useGameStore(s => s.setReplayStep);
   const setGameState  = useGameStore(s => s.setGameState);
   const setReplayAnalysis = useGameStore(s => s.setReplayAnalysis);
+  const setReplayAnalysisLoading = useGameStore(s => s.setReplayAnalysisLoading);
 
   const maxStep = replayFrames.length - 1;
+
+  // Colors that belong to human players in this game
+  const humanColors = new Set(
+    humanIndices.map(i => gameState?.players[i]?.color).filter(Boolean) as string[]
+  );
 
   const goToStep = useCallback(async (step: number) => {
     const clamped = Math.max(0, Math.min(step, maxStep));
     setReplayStep(clamped);
     const frame = replayFrames[clamped];
     if (frame?.state) setGameState(frame.state);
-    if (gameId) {
+
+    const actionColor = frame?.action?.color;
+    const isHumanAction = actionColor ? humanColors.has(actionColor) : false;
+
+    if (gameId && frame?.action && isHumanAction) {
+      setReplayAnalysisLoading(true);
       try {
         const analysis = await analyzeMoveStep({ game_id: gameId, step: clamped });
         setReplayAnalysis(analysis);
-      } catch {
-        setReplayAnalysis(null);
+      } catch (err) {
+        console.error('[analyze] step', clamped, err);
+        const msg = err instanceof Error ? err.message : 'Analysis unavailable';
+        setReplayAnalysis({ step: clamped, explanation_error: msg });
+      } finally {
+        setReplayAnalysisLoading(false);
       }
+    } else {
+      setReplayAnalysis(null);
     }
-  }, [maxStep, replayFrames, gameId, setReplayStep, setGameState, setReplayAnalysis]);
+  }, [maxStep, replayFrames, gameId, humanColors, setReplayStep, setGameState, setReplayAnalysis, setReplayAnalysisLoading]);
 
   if (!replayMode) return null;
 

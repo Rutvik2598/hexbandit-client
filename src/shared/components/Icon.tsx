@@ -2,9 +2,10 @@
 
 export type IconName =
   | 'settlement' | 'city' | 'road' | 'devcard'
-  | 'dice' | 'arrow-right' | 'swap' | 'check' | 'close'
-  | 'bank' | 'star' | 'cards' | 'play' | 'robot' | 'user'
-  | 'chevron' | 'road-badge' | 'army-badge';
+  | 'dice' | 'arrow-right' | 'arrow-left' | 'swap' | 'check' | 'close'
+  | 'bank' | 'star' | 'cards' | 'play' | 'robot' | 'user' | 'users'
+  | 'chevron' | 'road-badge' | 'army-badge'
+  | 'gear' | 'trophy' | 'target';
 
 interface IconProps {
   name: IconName;
@@ -65,6 +66,16 @@ export function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.
       return <svg {...p}><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/></svg>;
     case 'army-badge':
       return <svg {...p}><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>;
+    case 'arrow-left':
+      return <svg {...p}><path d="M19 12H5M11 6l-6 6 6 6"/></svg>;
+    case 'users':
+      return <svg {...p}><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6"/><circle cx="17" cy="8" r="3"/><path d="M22 21c0-3-2.5-5-5.5-5.5"/></svg>;
+    case 'gear':
+      return <svg {...p}><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>;
+    case 'trophy':
+      return <svg {...p}><path d="M8 21h8M12 17v4"/><path d="M7 4H4a1 1 0 00-1 1v3c0 3 2 5 4 6"/><path d="M17 4h3a1 1 0 011 1v3c0 3-2 5-4 6"/><path d="M5 4h14v9a7 7 0 01-14 0z"/></svg>;
+    case 'target':
+      return <svg {...p}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill={color} stroke="none"/></svg>;
     default:
       return null;
   }

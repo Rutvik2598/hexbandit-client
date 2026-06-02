@@ -714,61 +714,59 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
       )}
 
       {/* Build column — always visible so layout stays stable */}
-      {!hasDiscard && !hasMoveRobber && !isDecideAcceptees && (
-        <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <div className="eyebrow" style={{ padding: '0 1px 1px' }}>Build</div>
-          {allBuildActions.map(b => (
-            <BuildButton
-              key={b.key}
-              label={b.label}
-              iconName={b.iconName}
-              cost={b.cost}
-              resources={resources}
-              rolled={rolled}
-              isMyTurn={isHumanTurn}
-              available={b.available}
-              active={b.modeKey ? mode === b.modeKey : false}
-              disabled={disabled}
-              onClick={() => {
-                if (!isHumanTurn) return;
-                if (b.modeKey) {
-                  setMode(mode === b.modeKey ? 'IDLE' : b.modeKey);
-                } else {
-                  onAction({ action_type: 'BUY_DEVELOPMENT_CARD', value: null });
-                }
-              }}
-            />
-          ))}
+      <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <div className="eyebrow" style={{ padding: '0 1px 1px' }}>Build</div>
+        {allBuildActions.map(b => (
+          <BuildButton
+            key={b.key}
+            label={b.label}
+            iconName={b.iconName}
+            cost={b.cost}
+            resources={resources}
+            rolled={rolled}
+            isMyTurn={isHumanTurn}
+            available={b.available}
+            active={b.modeKey ? mode === b.modeKey : false}
+            disabled={disabled}
+            onClick={() => {
+              if (!isHumanTurn) return;
+              if (b.modeKey) {
+                setMode(mode === b.modeKey ? 'IDLE' : b.modeKey);
+              } else {
+                onAction({ action_type: 'BUY_DEVELOPMENT_CARD', value: null });
+              }
+            }}
+          />
+        ))}
 
-          {/* Dev card action buttons — human turn only */}
-          {isHumanTurn && devActions.length > 0 && (
-            <>
-              <div style={{ height: 1, background: 'var(--hairline)', margin: '2px 0' }} />
-              {devActions.map(d => (
-                <button
-                  key={d.type}
-                  onClick={() => {
-                    onAction({ action_type: d.type as PlayableAction['action_type'], value: null });
-                    if (d.type === 'PLAY_KNIGHT_CARD') setMode('MOVE_ROBBER');
-                  }}
-                  disabled={disabled}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 9,
-                    background: 'rgba(150,130,235,0.1)', border: '1px solid rgba(150,130,235,0.3)',
-                    color: '#d4c9f5', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(150,130,235,0.2)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(150,130,235,0.1)'; }}
-                >
-                  <Icon name={d.icon} size={15} color="#a98bff" />
-                  {d.label}
-                </button>
-              ))}
-            </>
-          )}
-        </div>
-      )}
+        {/* Dev card action buttons — human turn only */}
+        {isHumanTurn && devActions.length > 0 && (
+          <>
+            <div style={{ height: 1, background: 'var(--hairline)', margin: '2px 0' }} />
+            {devActions.map(d => (
+              <button
+                key={d.type}
+                onClick={() => {
+                  onAction({ action_type: d.type as PlayableAction['action_type'], value: null });
+                  if (d.type === 'PLAY_KNIGHT_CARD') setMode('MOVE_ROBBER');
+                }}
+                disabled={disabled}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 9,
+                  background: 'rgba(150,130,235,0.1)', border: '1px solid rgba(150,130,235,0.3)',
+                  color: '#d4c9f5', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(150,130,235,0.2)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(150,130,235,0.1)'; }}
+              >
+                <Icon name={d.icon} size={15} color="#a98bff" />
+                {d.label}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
 
       {/* Maritime trade rate summary (human only) */}
       {isHumanTurn && maritimeGiveRates.size > 0 && !hasDiscard && (

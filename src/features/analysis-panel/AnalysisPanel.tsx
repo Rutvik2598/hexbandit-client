@@ -2,96 +2,265 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { PLAYER_COLORS } from '@/shared/constants';
 import type { ActionRecord } from '@/shared/types/game';
+import type { PlayerColor } from '@/shared/types/game';
 
-function ActionDisplay({ action, label, playerColor }: {
-  action: ActionRecord | null | undefined;
-  label: string;
-  playerColor?: string;
-}) {
-  if (!action) return (
-    <div className="bg-slate-800/50 rounded-xl p-3">
-      <div className="text-xs text-slate-500 mb-1">{label}</div>
-      <div className="text-sm text-slate-600">—</div>
+// ---- helpers ----------------------------------------------------------------
+
+function pwinPct(action: ActionRecord | null | undefined, color: string | null | undefined): number | null {
+  if (!action?.pwin_by_color || !color) return null;
+  const v = action.pwin_by_color[color];
+  return typeof v === 'number' ? Math.round(v * 100) : null;
+}
+
+// ---- PwinBar ----------------------------------------------------------------
+
+function PwinBar({ pct, color }: { pct: number | null; color: string }) {
+  if (pct === null) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+      <div style={{
+        flex: 1, height: 5, borderRadius: 3,
+        background: 'rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        overflow: 'hidden',
+      }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          style={{ height: '100%', borderRadius: 3, background: color }}
+        />
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 800, color, minWidth: 36, textAlign: 'right' }}>
+        {pct}%
+      </span>
     </div>
   );
+}
 
-  const pwin = action.pwin_by_color && playerColor ? action.pwin_by_color[playerColor] : null;
+// ---- ActionCard -------------------------------------------------------------
+
+function ActionCard({
+  action, label, accent, playerColor,
+}: {
+  action: ActionRecord | null | undefined;
+  label: string;
+  accent: string;
+  playerColor: string | null | undefined;
+}) {
+  const pct = pwinPct(action, playerColor);
 
   return (
-    <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/40">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-slate-500">{label}</span>
-        {pwin !== null && pwin !== undefined && (
-          <span className="text-xs font-bold text-green-400">
-            {Math.round(pwin * 100)}% win
+    <div style={{
+      borderRadius: 12, overflow: 'hidden',
+      border: `1px solid ${accent}30`,
+      background: `color-mix(in srgb, ${accent} 8%, rgba(255,255,255,0.02))`,
+    }}>
+      {/* card header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '7px 10px 6px',
+        borderBottom: `1px solid ${accent}20`,
+        background: `${accent}12`,
+      }}>
+        <span style={{
+          fontSize: 9.5, fontWeight: 800, letterSpacing: '0.16em',
+          textTransform: 'uppercase', color: accent,
+        }}>
+          {label}
+        </span>
+        {pct !== null && (
+          <span style={{
+            fontSize: 11, fontWeight: 800,
+            padding: '2px 7px', borderRadius: 6,
+            background: `${accent}20`, color: accent,
+            border: `1px solid ${accent}35`,
+          }}>
+            {pct}% win
           </span>
         )}
       </div>
-      <div className="text-sm text-slate-200 font-medium">
-        {action.description || action.action_type}
+
+      {/* card body */}
+      <div style={{ padding: '9px 10px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {action ? (
+          <>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.35 }}>
+              {action.description || action.action_type}
+            </div>
+            {pct !== null && <PwinBar pct={pct} color={accent} />}
+          </>
+        ) : (
+          <div style={{ fontSize: 12, color: 'var(--text-ghost)', fontStyle: 'italic' }}>—</div>
+        )}
       </div>
     </div>
   );
 }
 
+// ---- Skeleton ---------------------------------------------------------------
+
+function SkeletonCard() {
+  return (
+    <div style={{
+      borderRadius: 12, border: '1px solid var(--hairline)',
+      background: 'rgba(255,255,255,0.02)',
+      overflow: 'hidden',
+    }}>
+      <div style={{
+        height: 32, background: 'rgba(255,255,255,0.04)',
+        borderBottom: '1px solid var(--hairline)',
+      }} />
+      <div style={{ padding: '9px 10px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <div style={{ height: 13, borderRadius: 5, background: 'rgba(255,255,255,0.05)', width: '70%' }} />
+        <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.04)' }} />
+      </div>
+    </div>
+  );
+}
+
+// ---- DeltaChip --------------------------------------------------------------
+
+function DeltaChip({ raw }: { raw: string }) {
+  const num = parseFloat(raw);
+  const isGood = !isNaN(num) && num >= 0;
+  const accent = isGood ? '#4ade80' : '#f87171';
+  const sign   = isGood ? '▲' : '▼';
+  const display = isNaN(num) ? raw : `${sign} ${Math.abs(num * 100).toFixed(1)}% win`;
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6,
+      padding: '6px 10px', borderRadius: 8,
+      background: `color-mix(in srgb, ${accent} 10%, rgba(255,255,255,0.02))`,
+      border: `1px solid ${accent}30`,
+    }}>
+      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        Delta
+      </span>
+      <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color: accent }}>
+        {display}
+      </span>
+    </div>
+  );
+}
+
+// ---- Main -------------------------------------------------------------------
+
 export default function AnalysisPanel() {
   const analysis = useGameStore(s => s.replayAnalysis);
+  const loading  = useGameStore(s => s.replayAnalysisLoading);
   const isReplay = useGameStore(s => s.replayMode);
 
   if (!isReplay) return null;
 
-  return (
-    <AnimatePresence>
-      {analysis && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
-          className="bg-slate-900/90 border border-slate-700/50 rounded-xl overflow-hidden"
-        >
-          <div className="px-3 py-2 border-b border-slate-700/50 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Move Analysis
-            </span>
-            {analysis.acting_player && (
-              <span
-                className="text-xs font-bold px-1.5 py-0.5 rounded"
-                style={{
-                  color: PLAYER_COLORS[analysis.acting_player as keyof typeof PLAYER_COLORS] || '#ccc',
-                  backgroundColor: (PLAYER_COLORS[analysis.acting_player as keyof typeof PLAYER_COLORS] || '#ccc') + '20',
-                }}
-              >
-                {analysis.acting_player}
-              </span>
-            )}
-          </div>
+  const playerColor = analysis?.acting_player ?? null;
+  const hex = playerColor ? (PLAYER_COLORS[playerColor as PlayerColor] ?? '#ccc') : null;
 
-          <div className="p-3 space-y-2">
-            <ActionDisplay
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* panel header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 2px',
+      }}>
+        <span style={{
+          fontSize: 10, fontWeight: 800, letterSpacing: '0.2em',
+          textTransform: 'uppercase', color: 'var(--text-faint)',
+        }}>
+          Move Analysis
+        </span>
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.span
+              key="loading"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="thinking-pulse"
+              style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-ghost)' }}
+            >
+              Analyzing…
+            </motion.span>
+          ) : hex && playerColor ? (
+            <motion.span
+              key={playerColor}
+              initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+              style={{
+                fontSize: 10, fontWeight: 800, letterSpacing: '0.08em',
+                padding: '3px 8px', borderRadius: 6,
+                color: hex,
+                background: `${hex}18`,
+                border: `1px solid ${hex}35`,
+              }}
+            >
+              {playerColor}
+            </motion.span>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {loading ? (
+          <motion.div
+            key="skeleton"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 7 }}
+          >
+            <SkeletonCard />
+            <SkeletonCard />
+          </motion.div>
+        ) : analysis ? (
+          <motion.div
+            key={analysis.step}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 7 }}
+          >
+            <ActionCard
               action={analysis.action_taken}
               label="Move Taken"
-              playerColor={analysis.acting_player || undefined}
+              accent="var(--amber)"
+              playerColor={playerColor}
             />
-            <ActionDisplay
+            <ActionCard
               action={analysis.best_action}
               label="Best Move"
-              playerColor={analysis.acting_player || undefined}
+              accent="#4ade80"
+              playerColor={playerColor}
             />
 
             {analysis.win_probability_delta && (
-              <div className="text-xs text-slate-400 bg-slate-800/40 rounded-lg p-2">
-                Delta: <span className="text-amber-400 font-bold">{analysis.win_probability_delta}</span>
-              </div>
+              <DeltaChip raw={analysis.win_probability_delta} />
             )}
 
-            {analysis.explanation && (
-              <div className="text-xs text-slate-300 bg-slate-800/40 rounded-lg p-2 leading-relaxed">
-                {analysis.explanation}
+            {(analysis.explanation || analysis.explanation_error) && (
+              <div style={{
+                padding: '9px 10px', borderRadius: 10,
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--hairline)',
+                fontSize: 11.5, lineHeight: 1.55,
+                color: analysis.explanation_error ? 'var(--text-ghost)' : 'var(--text-dim)',
+                fontStyle: analysis.explanation_error ? 'italic' : 'normal',
+              }}>
+                {analysis.explanation ?? analysis.explanation_error}
               </div>
             )}
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{
+              padding: '14px 12px', borderRadius: 10, textAlign: 'center',
+              background: 'rgba(255,255,255,0.02)', border: '1px solid var(--hairline)',
+              fontSize: 12, color: 'var(--text-ghost)',
+            }}
+          >
+            Analysis only available for human moves
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

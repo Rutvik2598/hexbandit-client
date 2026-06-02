@@ -231,7 +231,7 @@ export function useGameLoop() {
     } finally {
       humanInFlight.current = false;
     }
-  }, [gameId, gameState, autoPlaying, addLog, refreshState, evaluatePosition, setResourceGains]);
+  }, [gameId, gameState, autoPlaying, addLog, refreshState, evaluatePosition]);
 
   const autoAdvanceAI = useCallback(async () => {
     const runId = ++autoAdvanceRunId.current;

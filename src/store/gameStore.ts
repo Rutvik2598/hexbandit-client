@@ -38,7 +38,6 @@ interface GameStore {
   // Eval bar
   lastPwin: PwinByColor | null;
   lastPwinStep: number;
-  lastActionPwin: Map<string, { pwin_by_color: PwinByColor; confidence: number }> | null;
   isEvaluating: boolean;
 
   // Log
@@ -50,6 +49,7 @@ interface GameStore {
   replayFrames: RecordingFrame[];
   replayStep: number;
   replayAnalysis: AnalysisResult | null;
+  replayAnalysisLoading: boolean;
 
   // Auto-play
   autoPlaying: boolean;
@@ -81,6 +81,7 @@ interface GameStore {
   setReplayFrames: (frames: RecordingFrame[]) => void;
   setReplayStep: (step: number) => void;
   setReplayAnalysis: (a: AnalysisResult | null) => void;
+  setReplayAnalysisLoading: (v: boolean) => void;
   setAutoPlaying: (v: boolean) => void;
   setResourceGains: (gains: Record<string, Partial<Record<string, number>>> | null) => void;
   setLastRollDice: (dice: [number, number] | null) => void;
@@ -106,7 +107,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   thinking: INITIAL_THINKING,
   lastPwin: null,
   lastPwinStep: -1,
-  lastActionPwin: null,
   isEvaluating: false,
   logEntries: [],
   _logId: 0,
@@ -114,6 +114,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   replayFrames: [],
   replayStep: 0,
   replayAnalysis: null,
+  replayAnalysisLoading: false,
   autoPlaying: false,
   resourceGains: null,
   lastRollDice: null,
@@ -159,36 +160,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
-    // Scale action pwins
-    let actionPwinMap: Map<string, { pwin_by_color: PwinByColor; confidence: number }> | null = null;
-    if (result.actions_pwin && result.actions_pwin.length > 0) {
-      actionPwinMap = new Map();
-      const factors: Record<string, number> = {};
-      for (const color of Object.keys(newPwin)) {
-        const raw = newPwin[color] || 0;
-        factors[color] = raw > 0 ? (smoothed[color] || 0) / raw : 1;
-      }
-      for (const entry of result.actions_pwin) {
-        const scaled: PwinByColor = {};
-        let t = 0;
-        for (const color of Object.keys(entry.pwin_by_color)) {
-          scaled[color] = entry.pwin_by_color[color] * (factors[color] ?? 1);
-          t += scaled[color];
-        }
-        if (t > 0) for (const c of Object.keys(scaled)) scaled[c] /= t;
-        actionPwinMap.set(entry.action_label, { pwin_by_color: scaled, confidence: entry.confidence });
-      }
-    }
-
     const gameState = get().gameState;
     set({
       lastPwin: smoothed,
       lastPwinStep: gameState?.action_step ?? 0,
-      lastActionPwin: actionPwinMap,
     });
   },
 
-  clearPwin: () => set({ lastPwin: null, lastPwinStep: -1, lastActionPwin: null }),
+  clearPwin: () => set({ lastPwin: null, lastPwinStep: -1 }),
 
   setEvaluating: (v) => set({ isEvaluating: v }),
 
@@ -214,6 +193,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setReplayFrames: (frames) => set({ replayFrames: frames }),
   setReplayStep: (step) => set({ replayStep: step }),
   setReplayAnalysis: (a) => set({ replayAnalysis: a }),
+  setReplayAnalysisLoading: (v) => set({ replayAnalysisLoading: v }),
   setAutoPlaying: (v) => set({ autoPlaying: v }),
   setResourceGains: (gains) => set({ resourceGains: gains }),
   setLastRollDice: (dice) => set({ lastRollDice: dice }),
@@ -229,7 +209,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     thinking: INITIAL_THINKING,
     lastPwin: null,
     lastPwinStep: -1,
-    lastActionPwin: null,
     isEvaluating: false,
     logEntries: [],
     _logId: 0,
@@ -237,6 +216,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     replayFrames: [],
     replayStep: 0,
     replayAnalysis: null,
+    replayAnalysisLoading: false,
     autoPlaying: false,
     resourceGains: null,
     lastRollDice: null,

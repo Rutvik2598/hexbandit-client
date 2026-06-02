@@ -192,6 +192,118 @@ interface BoardSceneProps {
 }
 
 // Clamps the OrbitControls target so panning can't go further than the board edge
+// ── Analysis overlay ──────────────────────────────────────────────────────────
+// Parses action_taken / best_action from replayAnalysis and renders pulsing
+// torus rings at the corresponding board positions.
+
+function parseActionPos(
+  actionType: string,
+  value: unknown,
+): [number, number, number] | null {
+  if (actionType === 'BUILD_SETTLEMENT' || actionType === 'BUILD_CITY') {
+    if (typeof value === 'number') return nodeToWorld3D(value);
+  }
+  if (actionType === 'BUILD_ROAD') {
+    if (Array.isArray(value) && value.length >= 2) {
+      const [ax, ay, az] = nodeToWorld3D(value[0] as number);
+      const [bx, by, bz] = nodeToWorld3D(value[1] as number);
+      return [(ax + bx) / 2, (ay + by) / 2, (az + bz) / 2];
+    }
+  }
+  if (actionType === 'MOVE_ROBBER') {
+    if (Array.isArray(value) && Array.isArray(value[0])) {
+      const [cx, , cz] = value[0] as [number, number, number];
+      return tileToWorld3D(cx, cz);
+    }
+    if (Array.isArray(value) && typeof value[0] === 'number') {
+      const [cx, , cz] = value as [number, number, number];
+      return tileToWorld3D(cx, cz);
+    }
+  }
+  return null;
+}
+
+function PulsingRing({
+  position,
+  color,
+  phase: phaseOffset,
+}: {
+  position: [number, number, number];
+  color: string;
+  phase: number;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const threeColor = useMemo(() => new THREE.Color(color), [color]);
+
+  useFrame(({ clock }) => {
+    if (!meshRef.current) return;
+    const t = clock.elapsedTime * 2.8 + phaseOffset;
+    const pulse = 0.55 + 0.45 * Math.sin(t);
+    const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+    mat.emissiveIntensity = 1.2 + 1.8 * pulse;
+    meshRef.current.scale.setScalar(0.9 + 0.18 * pulse);
+  });
+
+  return (
+    <mesh
+      ref={meshRef}
+      position={[position[0], position[1] + 0.08, position[2]]}
+      rotation={[-Math.PI / 2, 0, 0]}
+    >
+      <torusGeometry args={[0.52, 0.09, 8, 32]} />
+      <meshStandardMaterial
+        color={threeColor}
+        emissive={threeColor}
+        emissiveIntensity={2}
+        roughness={0.3}
+        metalness={0.1}
+        transparent
+        opacity={0.92}
+      />
+    </mesh>
+  );
+}
+
+function AnalysisOverlay() {
+  const analysis  = useGameStore(s => s.replayAnalysis);
+  const isReplay  = useGameStore(s => s.replayMode);
+  const loading   = useGameStore(s => s.replayAnalysisLoading);
+
+  if (!isReplay || loading || !analysis) return null;
+
+  const takenPos = analysis.action_taken
+    ? parseActionPos(analysis.action_taken.action_type, analysis.action_taken.value)
+    : null;
+
+  const bestPos = analysis.best_action
+    ? parseActionPos(analysis.best_action.action_type, analysis.best_action.value)
+    : null;
+
+  const sameSpot =
+    takenPos && bestPos &&
+    Math.abs(takenPos[0] - bestPos[0]) < 0.1 &&
+    Math.abs(takenPos[2] - bestPos[2]) < 0.1;
+
+  return (
+    <>
+      {takenPos && (
+        <PulsingRing
+          position={takenPos}
+          color="#f0a93a"
+          phase={0}
+        />
+      )}
+      {bestPos && !sameSpot && (
+        <PulsingRing
+          position={bestPos}
+          color="#4ade80"
+          phase={Math.PI}
+        />
+      )}
+    </>
+  );
+}
+
 function PanClamp({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl | null> }) {
   useFrame(() => {
     const ctrl = controlsRef.current;
@@ -372,6 +484,7 @@ function BoardScene({ onAction, disabled }: BoardSceneProps) {
 
       <Ocean />
       <BeachBorder />
+      <AnalysisOverlay />
 
       {/* Hex tiles */}
       {Object.entries(board.tiles).map(([key, tile]) => {

@@ -140,7 +140,6 @@ export default function LobbyPage() {
   const [mapSeed, setMapSeed]           = useState('');
   const [creating, setCreating]         = useState(false);
   const [createError, setCreateError]   = useState<string | null>(null);
-
   const loadAgents = useCallback(async (count: number) => {
     setAgentsLoading(true);
     setAgentsError(null);
