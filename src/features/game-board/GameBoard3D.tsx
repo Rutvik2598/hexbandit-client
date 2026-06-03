@@ -23,6 +23,7 @@ import type { PlayableAction, PlayerColor } from '@/shared/types/game';
 interface GameBoard3DProps {
   onAction?: (_: PlayableAction) => void;
   disabled?: boolean;
+  sidebarWidth?: number;
 }
 
 // ── Ocean plane ────────────────────────────────────────────────────────────────
@@ -189,6 +190,7 @@ function SidebarAwareCamera({ sidebarWidth }: { sidebarWidth: number }) {
 interface BoardSceneProps {
   onAction?: (_: PlayableAction) => void;
   disabled?: boolean;
+  sidebarWidth?: number;
 }
 
 // Clamps the OrbitControls target so panning can't go further than the board edge
@@ -237,28 +239,28 @@ function PulsingRing({
 
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
-    const t = clock.elapsedTime * 2.8 + phaseOffset;
+    const t = clock.elapsedTime * 2.2 + phaseOffset;
     const pulse = 0.55 + 0.45 * Math.sin(t);
     const mat = meshRef.current.material as THREE.MeshStandardMaterial;
-    mat.emissiveIntensity = 1.2 + 1.8 * pulse;
-    meshRef.current.scale.setScalar(0.9 + 0.18 * pulse);
+    mat.emissiveIntensity = 0.5 + 0.7 * pulse;
+    meshRef.current.scale.setScalar(0.94 + 0.08 * pulse);
   });
 
   return (
     <mesh
       ref={meshRef}
-      position={[position[0], position[1] + 0.08, position[2]]}
+      position={[position[0], position[1] + 0.06, position[2]]}
       rotation={[-Math.PI / 2, 0, 0]}
     >
-      <torusGeometry args={[0.52, 0.09, 8, 32]} />
+      <torusGeometry args={[0.40, 0.055, 8, 32]} />
       <meshStandardMaterial
         color={threeColor}
         emissive={threeColor}
-        emissiveIntensity={2}
-        roughness={0.3}
-        metalness={0.1}
+        emissiveIntensity={0.8}
+        roughness={0.4}
+        metalness={0.05}
         transparent
-        opacity={0.92}
+        opacity={0.58}
       />
     </mesh>
   );
@@ -296,7 +298,7 @@ function AnalysisOverlay() {
       {bestPos && !sameSpot && (
         <PulsingRing
           position={bestPos}
-          color="#4ade80"
+          color="#4f8dff"
           phase={Math.PI}
         />
       )}
@@ -317,7 +319,7 @@ function PanClamp({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsI
   return null;
 }
 
-function BoardScene({ onAction, disabled }: BoardSceneProps) {
+function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
   const gameState = useGameStore(s => s.gameState);
@@ -449,7 +451,7 @@ function BoardScene({ onAction, disabled }: BoardSceneProps) {
 
   return (
     <>
-      <SidebarAwareCamera sidebarWidth={372} />
+      <SidebarAwareCamera sidebarWidth={sidebarWidth} />
 
       {/* Lighting — intensities tuned for sRGB-correct textures + NoToneMapping */}
       <ambientLight intensity={1.2} color="#c8deff" />
@@ -477,7 +479,7 @@ function BoardScene({ onAction, disabled }: BoardSceneProps) {
         minDistance={5}
         maxDistance={24}
         mouseButtons={{ LEFT: 2, MIDDLE: 1, RIGHT: 2 }}
-        touches={{ ONE: 2, TWO: 1 }}
+        touches={{ ONE: 1, TWO: 2 }}
         target={[0, 0, 0]}
       />
       <PanClamp controlsRef={controlsRef} />
@@ -581,9 +583,9 @@ function BoardLoadingFallback() {
 }
 
 // ── Main export ────────────────────────────────────────────────────────────────
-export default function GameBoard3D({ onAction, disabled }: GameBoard3DProps) {
+export default function GameBoard3D({ onAction, disabled, sidebarWidth = 372 }: GameBoard3DProps) {
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full" style={{ touchAction: 'none' }}>
       <Canvas
         camera={{ position: [0, 14, 9], fov: 45, near: 0.1, far: 200 }}
         shadows
@@ -591,7 +593,7 @@ export default function GameBoard3D({ onAction, disabled }: GameBoard3DProps) {
         dpr={[1, 2]}
       >
         <Suspense fallback={<BoardLoadingFallback />}>
-          <BoardScene onAction={onAction} disabled={disabled} />
+          <BoardScene onAction={onAction} disabled={disabled} sidebarWidth={sidebarWidth} />
         </Suspense>
       </Canvas>
     </div>

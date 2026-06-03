@@ -439,9 +439,10 @@ function DecideAccepteesPanel({ onAction, disabled, actions, trade, players }: {
 export interface ActionPanelProps {
   onAction: (_: PlayableAction) => void;
   disabled?: boolean;
+  width?: number | string;
 }
 
-export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
+export default function ActionPanel({ onAction, disabled, width = 190 }: ActionPanelProps) {
   const gameState     = useGameStore(s => s.gameState);
   const thinking      = useGameStore(s => s.thinking);
   const lastRollDice  = useGameStore(s => s.lastRollDice);
@@ -449,9 +450,9 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
   const mode          = useInteractionStore(s => s.mode);
   const setMode       = useInteractionStore(s => s.setMode);
 
-  const [yopPick, setYopPick]     = useState<ResourceType | null>(null);
+  const [yopPick, setYopPick]         = useState<ResourceType | null>(null);
   const [rollPending, setRollPending] = useState(false);
-  const [rollKey, setRollKey]     = useState(0);
+  const [rollKey, setRollKey]         = useState(0);
   const prevDice = useRef<typeof lastRollDice>(lastRollDice);
 
   const playableActions = gameState?.playable_actions ?? [];
@@ -574,7 +575,7 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
 
   // ---- render ----
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 190, pointerEvents: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width, pointerEvents: 'auto' }}>
 
       {/* Status / hint card — always rendered, never pops in/out */}
       {statusContent && (
@@ -646,7 +647,7 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
         />
       )}
 
-      {/* Dice tray + main action button — always visible */}
+      {/* Dice tray + action buttons — always rendered to keep panel height stable */}
       <div className="panel" style={{
         padding: '12px 14px 14px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
@@ -663,7 +664,6 @@ export default function ActionPanel({ onAction, disabled }: ActionPanelProps) {
               width: '100%', padding: '12px 0', fontSize: 14,
               fontFamily: 'var(--ff-display)', fontWeight: 700, letterSpacing: '0.03em',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              opacity: (disabled || isRolling) ? 0.45 : 1,
             }}
           >
             <Icon name="dice" size={17} color="#2a1a05" />

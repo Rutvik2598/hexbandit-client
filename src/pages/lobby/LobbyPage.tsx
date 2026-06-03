@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { getAgents, testApiKey as testKey } from '@/services/api/agentsApi';
 import { createGame } from '@/services/api/gamesApi';
 import { setApiKey, getApiKey } from '@/services/api/client';
@@ -18,9 +19,10 @@ interface BotSelectProps {
   options: AgentConfig[];
   onChange: (id: string) => void;
   disabled?: boolean;
+  compact?: boolean;
 }
 
-function BotSelect({ value, options, onChange, disabled }: BotSelectProps) {
+function BotSelect({ value, options, onChange, disabled, compact }: BotSelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -40,11 +42,11 @@ function BotSelect({ value, options, onChange, disabled }: BotSelectProps) {
         onClick={() => !disabled && setOpen(o => !o)}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 10, padding: '11px 14px', borderRadius: 11,
+          gap: 8, padding: compact ? '10px 11px' : '11px 14px', borderRadius: 11,
           background: disabled ? 'rgba(255,255,255,0.03)' : 'var(--glass-hi)',
           border: `1px solid var(--glass-brd)`,
           color: disabled ? 'var(--text-faint)' : 'var(--text)',
-          fontFamily: 'var(--ff-ui)', fontWeight: 600, fontSize: 14.5,
+          fontFamily: 'var(--ff-ui)', fontWeight: 600, fontSize: compact ? 13 : 14.5,
           cursor: disabled ? 'default' : 'pointer',
           transition: 'border-color .15s, background .15s',
         }}
@@ -122,6 +124,8 @@ function BotSelect({ value, options, onChange, disabled }: BotSelectProps) {
 
 export default function LobbyPage() {
   const navigate   = useNavigate();
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
   const resetGame  = useGameStore(s => s.reset);
   const setGameId  = useGameStore(s => s.setGameId);
   const addLog     = useGameStore(s => s.addLog);
@@ -210,7 +214,7 @@ export default function LobbyPage() {
   const colorLabels: Record<string, string> = { RED: 'RED', BLUE: 'BLUE', ORANGE: 'ORANGE', WHITE: 'WHITE' };
 
   return (
-    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', overflow: 'auto' }}>
+    <div style={{ position: 'absolute', inset: 0, display: isMobile ? 'block' : 'grid', placeItems: isMobile ? undefined : 'center', overflowY: 'auto', overflowX: 'hidden' }}>
       <div className="atmos" />
 
       {/* blue radial glow */}
@@ -223,13 +227,13 @@ export default function LobbyPage() {
         initial={{ opacity: 0, y: 22 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        style={{ position: 'relative', width: 560, maxWidth: '92vw', padding: '48px 0 40px' }}
+        style={{ position: 'relative', width: isMobile ? '100%' : 560, maxWidth: '100%', padding: isMobile ? '20px 0 40px' : '48px 0 40px', boxSizing: 'border-box' }}
       >
         {/* ── Crest + Title ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 30 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: isMobile ? 20 : 30 }}>
           {/* hexagonal crest */}
-          <div style={{ position: 'relative', width: 78, height: 86, marginBottom: 14 }}>
-            <svg width="78" height="86" viewBox="0 0 78 86"
+          <div style={{ position: 'relative', width: isMobile ? 56 : 78, height: isMobile ? 62 : 86, marginBottom: isMobile ? 10 : 14 }}>
+            <svg width={isMobile ? 56 : 78} height={isMobile ? 62 : 86} viewBox="0 0 78 86"
               style={{ filter: 'drop-shadow(0 8px 22px rgba(47,116,240,0.45))' }}>
               <path d="M39 2L73 21V64L39 84L5 64V21Z" fill="url(#crestg)" stroke="var(--amber)" strokeWidth="2" />
               <path d="M39 2L73 21V64L39 84L5 64V21Z" fill="none"
@@ -242,7 +246,7 @@ export default function LobbyPage() {
               </defs>
             </svg>
             <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-              <svg width="34" height="34" viewBox="0 0 24 24">
+              <svg width={isMobile ? 24 : 34} height={isMobile ? 24 : 34} viewBox="0 0 24 24">
                 <rect x="3" y="3" width="18" height="18" rx="4.5" fill="#eef3fb" />
                 <circle cx="8" cy="8" r="1.6" fill="#0e2244" />
                 <circle cx="16" cy="16" r="1.6" fill="#0e2244" />
@@ -254,7 +258,7 @@ export default function LobbyPage() {
           </div>
 
           <h1 style={{
-            fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 52,
+            fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: isMobile ? 36 : 52,
             margin: 0, letterSpacing: '0.04em',
             background: 'linear-gradient(180deg,#fff,#bcd0ee)',
             WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
@@ -272,7 +276,7 @@ export default function LobbyPage() {
         </div>
 
         {/* ── Config panel ── */}
-        <div className="panel" style={{ padding: 26 }}>
+        <div className="panel" style={{ padding: isMobile ? 18 : 26, margin: isMobile ? '0 12px' : undefined, boxSizing: 'border-box' }}>
 
           {/* API Key (collapsible) */}
           <div style={{ marginBottom: 22 }}>
@@ -345,13 +349,13 @@ export default function LobbyPage() {
 
           {/* Player count */}
           <div className="eyebrow" style={{ marginBottom: 12 }}>Players</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 8 : 10, marginBottom: 24 }}>
             {PLAYER_COUNT_OPTIONS.map(n => {
               const on = numPlayers === n;
               return (
                 <button key={n} onClick={() => handleNumPlayersChange(n)} className="btn"
                   style={{
-                    padding: '16px 0', fontSize: 17,
+                    padding: isMobile ? '13px 0' : '16px 0', fontSize: isMobile ? 14 : 17,
                     fontFamily: 'var(--ff-display)', letterSpacing: '0.04em',
                     background: on
                       ? 'linear-gradient(180deg,var(--sapphire-bright),var(--sapphire))'
@@ -388,36 +392,36 @@ export default function LobbyPage() {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
               {activeColors.map((colorKey, i) => {
                 const hex = PLAYER_COLORS[colorKey] || '#ccc';
                 const label = colorLabels[colorKey] ?? colorKey;
                 const isHuman = i === 0;
                 return (
-                  <div key={colorKey} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div key={colorKey} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14 }}>
                     {/* Color dot + label */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: 96, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8, width: isMobile ? 58 : 96, flexShrink: 0 }}>
                       <span style={{
-                        width: 13, height: 13, borderRadius: '50%', background: hex,
-                        boxShadow: isHuman ? `0 0 12px ${hex}` : 'none',
+                        width: isMobile ? 10 : 13, height: isMobile ? 10 : 13, borderRadius: '50%', background: hex, flexShrink: 0,
+                        boxShadow: isHuman ? `0 0 10px ${hex}` : 'none',
                         border: colorKey === 'WHITE' ? '1px solid rgba(0,0,0,0.3)' : 'none',
                       }} />
-                      <span style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '0.12em', color: 'var(--text-dim)' }}>
-                        {label}
+                      <span style={{ fontSize: isMobile ? 10 : 12.5, fontWeight: 800, letterSpacing: isMobile ? '0.04em' : '0.12em', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                        {isMobile ? label.slice(0, 3) : label}
                       </span>
                     </div>
 
                     {/* Human player row */}
                     {isHuman ? (
                       <div style={{
-                        flex: 1, display: 'flex', alignItems: 'center', gap: 9,
-                        padding: '11px 14px', borderRadius: 11,
+                        flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                        padding: isMobile ? '10px 11px' : '11px 14px', borderRadius: 11,
                         background: 'rgba(228,75,67,0.10)', border: '1px solid rgba(228,75,67,0.35)',
-                        color: 'var(--text)', fontWeight: 700, fontSize: 14.5,
+                        color: 'var(--text)', fontWeight: 700, fontSize: isMobile ? 13 : 14.5,
                       }}>
-                        <Icon name="user" size={17} color="var(--p-red)" />
+                        <Icon name="user" size={isMobile ? 15 : 17} color="var(--p-red)" />
                         You
-                        <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', color: 'var(--p-red)', opacity: 0.8 }}>
+                        <span style={{ marginLeft: 'auto', fontSize: isMobile ? 10 : 11, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--p-red)', opacity: 0.8 }}>
                           HUMAN
                         </span>
                       </div>
@@ -426,6 +430,7 @@ export default function LobbyPage() {
                         value={slots[i]?.agentId || ''}
                         options={agentOptions}
                         onChange={(id) => setSlots(prev => prev.map((s, idx) => idx === i ? { agentId: id } : s))}
+                        compact={isMobile}
                       />
                     )}
                   </div>

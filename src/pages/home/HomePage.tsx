@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/shared/components/Icon';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import type { IconName } from '@/shared/components/Icon';
 
 // ---- Logo ------------------------------------------------------------------
@@ -81,6 +82,8 @@ interface FeatureCardProps {
 
 function FeatureCard({ icon, kicker, title, desc, accent, enabled, onClick }: FeatureCardProps) {
   const [hover, setHover] = useState(false);
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
 
   return (
     <motion.button
@@ -91,7 +94,7 @@ function FeatureCard({ icon, kicker, title, desc, accent, enabled, onClick }: Fe
       transition={{ duration: 0.2 }}
       style={{
         position: 'relative', textAlign: 'left', flex: 1, minWidth: 0,
-        padding: '26px 26px 24px', borderRadius: 20, overflow: 'hidden',
+        padding: isMobile ? '20px 20px 18px' : '26px 26px 24px', borderRadius: 20, overflow: 'hidden',
         background: hover
           ? `linear-gradient(165deg, color-mix(in srgb, ${accent} 24%, var(--glass-2)), var(--glass-2))`
           : `linear-gradient(165deg, color-mix(in srgb, ${accent} 14%, var(--glass-2)), var(--glass-2))`,
@@ -140,14 +143,14 @@ function FeatureCard({ icon, kicker, title, desc, accent, enabled, onClick }: Fe
         {kicker}
       </div>
       <div style={{
-        fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 26,
+        fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: isMobile ? 22 : 26,
         color: 'var(--text)', letterSpacing: '0.01em', marginBottom: 8,
       }}>
         {title}
       </div>
       <div style={{
         fontSize: 13.5, fontWeight: 500, color: 'var(--text-dim)',
-        lineHeight: 1.5, maxWidth: 260,
+        lineHeight: 1.5, maxWidth: isMobile ? 'none' : 260,
       }}>
         {desc}
       </div>
@@ -267,6 +270,8 @@ function Toast({ msg }: { msg: string | null }) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -294,18 +299,36 @@ export default function HomePage() {
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 5,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '22px 32px',
+        padding: isMobile ? '14px 16px' : '22px 32px',
       }}>
-        <HomeLogo />
+        {isMobile ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <svg width="28" height="32" viewBox="0 0 78 86" style={{ filter: 'drop-shadow(0 4px 10px rgba(47,116,240,0.4))' }}>
+              <defs>
+                <linearGradient id="homeCrestSm" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="#1f3f70" /><stop offset="1" stopColor="#0d2244" />
+                </linearGradient>
+              </defs>
+              <path d="M39 2L73 21V64L39 84L5 64V21Z" fill="url(#homeCrestSm)" stroke="var(--amber)" strokeWidth="2.5" />
+              <circle cx="39" cy="43" r="10" fill="#eef3fb" />
+              <circle cx="34" cy="40" r="2" fill="var(--p-red)" />
+            </svg>
+            <span style={{ fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 18, letterSpacing: '0.06em' }}>
+              HEXBANDIT
+            </span>
+          </div>
+        ) : (
+          <HomeLogo />
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={() => soon('Settings')}
             className="btn"
-            style={{ width: 42, height: 42, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}
+            style={{ width: isMobile ? 38 : 42, height: isMobile ? 38 : 42, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}
           >
-            <Icon name="gear" size={19} color="var(--text-dim)" />
+            <Icon name="gear" size={isMobile ? 17 : 19} color="var(--text-dim)" />
           </button>
-          <ProfileChip onClick={() => soon('Profile')} />
+          {!isMobile && <ProfileChip onClick={() => soon('Profile')} />}
         </div>
       </div>
 
@@ -316,8 +339,8 @@ export default function HomePage() {
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         style={{
           position: 'relative', zIndex: 3,
-          width: 880, maxWidth: '94vw',
-          padding: '96px 0 40px',
+          width: isMobile ? '100%' : 880, maxWidth: isMobile ? '100%' : '94vw',
+          padding: isMobile ? '72px 16px 32px' : '96px 0 40px',
         }}
       >
         {/* welcome header */}
@@ -326,7 +349,7 @@ export default function HomePage() {
             Welcome back, Settler
           </div>
           <h1 style={{
-            fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 40,
+            fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: isMobile ? 28 : 40,
             margin: 0, letterSpacing: '0.01em',
             background: 'linear-gradient(180deg,#fff,#c4d4ee)',
             WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
@@ -336,7 +359,7 @@ export default function HomePage() {
         </div>
 
         {/* primary feature cards */}
-        <div style={{ display: 'flex', gap: 18, marginBottom: 18 }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 18, marginBottom: 18 }}>
           <FeatureCard
             icon="users"
             kicker="Multiplayer"
@@ -358,7 +381,7 @@ export default function HomePage() {
         </div>
 
         {/* secondary tiles */}
-        <div style={{ display: 'flex', gap: 14 }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 10 : 14 }}>
           <MenuTile
             icon="trophy"
             title="Tournaments"

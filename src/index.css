@@ -220,3 +220,46 @@ button { font-family: var(--ff-ui); cursor: pointer; }
 .legal-glow  { filter: drop-shadow(0 0 6px rgba(100, 200, 255, 0.7)); }
 .selected-glow { filter: drop-shadow(0 0 8px rgba(250, 200, 50, 0.8)); }
 .robber-glow { filter: drop-shadow(0 0 10px rgba(220, 80, 80, 0.8)); }
+
+/* ============================================================
+   RESPONSIVE — mobile & tablet utilities
+   ============================================================ */
+
+/* Remove tap flash on mobile buttons */
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Hide scrollbar but allow scroll */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Bottom nav bar — accounts for iPhone home indicator */
+.mobile-bottom-bar {
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  height: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Drawer that sits just above the bottom bar */
+.mobile-drawer {
+  border-radius: 20px 20px 0 0;
+}
+
+/* Compact panel text scale for tablet */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .eyebrow { font-size: 10px; }
+}
+
+/* Touch-friendly minimum hit targets */
+@media (max-width: 1023px) {
+  .btn { min-height: 36px; }
+}
+@media (max-width: 767px) {
+  .btn { min-height: 44px; }
+}

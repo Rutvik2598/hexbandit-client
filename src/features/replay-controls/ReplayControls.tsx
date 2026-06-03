@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { analyzeMoveStep } from '@/services/api/movesApi';
 
-export default function ReplayControls() {
+export default function ReplayControls({ compact = false }: { compact?: boolean }) {
   const replayMode    = useGameStore(s => s.replayMode);
   const replayFrames  = useGameStore(s => s.replayFrames);
   const replayStep    = useGameStore(s => s.replayStep);
@@ -53,6 +53,42 @@ export default function ReplayControls() {
   const frame  = replayFrames[replayStep];
   const action = frame?.action;
   const pct    = maxStep > 0 ? (replayStep / maxStep) * 100 : 0;
+
+  const transportButtons = [
+    { label: '⏮', title: 'First',    onClick: () => goToStep(0),              disabled: replayStep === 0 },
+    { label: '◀',  title: 'Previous', onClick: () => goToStep(replayStep - 1), disabled: replayStep === 0 },
+    { label: '▶',  title: 'Next',     onClick: () => goToStep(replayStep + 1), disabled: replayStep === maxStep },
+    { label: '⏭', title: 'Last',     onClick: () => goToStep(maxStep),        disabled: replayStep === maxStep },
+  ];
+
+  if (compact) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '8px 10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: 'var(--ff-display)', fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--amber-soft)' }}>
+            Replay
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)' }}>
+            <span style={{ color: 'var(--text-dim)' }}>{replayStep + 1}</span>{' / '}{maxStep + 1}
+          </span>
+        </div>
+        {action && (
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--hairline)', borderRadius: 6, padding: '4px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--text-ghost)', marginRight: 4 }}>{action.color}:</span>
+            {action.description || action.action_type}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 5 }}>
+          {transportButtons.map(btn => (
+            <button key={btn.title} onClick={btn.onClick} disabled={btn.disabled} title={btn.title}
+              className="btn" style={{ flex: 1, padding: '8px 0', fontSize: 15, display: 'grid', placeItems: 'center', opacity: btn.disabled ? 0.3 : 1 }}>
+              {btn.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -137,12 +173,7 @@ export default function ReplayControls() {
 
       {/* transport buttons */}
       <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-        {[
-          { label: '⏮', title: 'First',    onClick: () => goToStep(0),              disabled: replayStep === 0 },
-          { label: '◀',  title: 'Previous', onClick: () => goToStep(replayStep - 1), disabled: replayStep === 0 },
-          { label: '▶',  title: 'Next',     onClick: () => goToStep(replayStep + 1), disabled: replayStep === maxStep },
-          { label: '⏭', title: 'Last',     onClick: () => goToStep(maxStep),        disabled: replayStep === maxStep },
-        ].map(btn => (
+        {transportButtons.map(btn => (
           <button
             key={btn.title}
             onClick={btn.onClick}

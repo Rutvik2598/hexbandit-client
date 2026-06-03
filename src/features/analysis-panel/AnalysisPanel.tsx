@@ -147,12 +147,61 @@ function DeltaChip({ raw }: { raw: string }) {
 
 // ---- Main -------------------------------------------------------------------
 
-export default function AnalysisPanel() {
+export default function AnalysisPanel({ mobile = false }: { mobile?: boolean }) {
   const analysis = useGameStore(s => s.replayAnalysis);
   const loading  = useGameStore(s => s.replayAnalysisLoading);
   const isReplay = useGameStore(s => s.replayMode);
 
   if (!isReplay) return null;
+
+  // ── Compact 2-column mobile layout ─────────────────────────────────────────
+  if (mobile) {
+    if (loading) {
+      return (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1, height: 70, borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--hairline)', animation: 'thinking-pulse 1.2s ease-in-out infinite' }} />
+          <div style={{ flex: 1, height: 70, borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--hairline)', animation: 'thinking-pulse 1.2s ease-in-out infinite' }} />
+        </div>
+      );
+    }
+    if (!analysis) {
+      return (
+        <div style={{ fontSize: 11, color: 'var(--text-ghost)', textAlign: 'center', padding: '10px 0' }}>
+          Scrub to a human move to see analysis
+        </div>
+      );
+    }
+    const cols: { label: string; accent: string; action: ActionRecord | null | undefined }[] = [
+      { label: 'Move Taken', accent: 'var(--amber)',        action: analysis.action_taken },
+      { label: 'Best Move',  accent: 'var(--sapphire-bright)', action: analysis.best_action },
+    ];
+    return (
+      <div style={{ display: 'flex', gap: 8 }}>
+        {cols.map(col => (
+          <div key={col.label} style={{
+            flex: 1, borderRadius: 10, overflow: 'hidden',
+            border: `1px solid color-mix(in srgb, ${col.accent} 30%, transparent)`,
+            background: `color-mix(in srgb, ${col.accent} 7%, rgba(255,255,255,0.02))`,
+          }}>
+            <div style={{
+              padding: '5px 9px', borderBottom: `1px solid color-mix(in srgb, ${col.accent} 20%, transparent)`,
+              background: `color-mix(in srgb, ${col.accent} 12%, transparent)`,
+            }}>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: col.accent }}>
+                {col.label}
+              </span>
+            </div>
+            <div style={{ padding: '8px 9px', fontSize: 11.5, fontWeight: 600, color: 'var(--text)', lineHeight: 1.35 }}>
+              {col.action
+                ? (col.action.description || col.action.action_type)
+                : <span style={{ color: 'var(--text-ghost)', fontStyle: 'italic' }}>—</span>
+              }
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   const playerColor = analysis?.acting_player ?? null;
   const hex = playerColor ? (PLAYER_COLORS[playerColor as PlayerColor] ?? '#ccc') : null;
