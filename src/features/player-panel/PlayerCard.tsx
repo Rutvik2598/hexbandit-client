@@ -10,6 +10,7 @@ interface PlayerCardProps {
   isHumanPlayer: boolean;
   pwin?: number | null;
   compact?: boolean;
+  resourceGains?: Partial<Record<string, number>>;
 }
 
 export default function PlayerCard({
@@ -17,6 +18,7 @@ export default function PlayerCard({
   isCurrentTurn,
   isHumanPlayer,
   pwin,
+  resourceGains: _resourceGains,
 }: PlayerCardProps) {
   const color = player.color as PlayerColor;
   const hex   = PLAYER_COLORS[color] || '#ccc';

@@ -365,8 +365,6 @@ export default function GamePage() {
   //  MOBILE LAYOUT  (<768px)
   // ══════════════════════════════════════════════════════════════════════════
   if (bp === 'mobile') {
-    const safeBottom = 'calc(60px + env(safe-area-inset-bottom, 0px))';
-
     return (
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', fontFamily: 'var(--ff-ui)' }}>
         <FlyLayer />
