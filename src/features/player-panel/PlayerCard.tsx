@@ -56,7 +56,7 @@ export default function PlayerCard({
         }} />
 
         {/* name + badges */}
-        <span style={{ fontWeight: 800, fontSize: 14.5, color: 'var(--text)', flex: 1, minWidth: 0, truncate: true }}>
+        <span className="truncate" style={{ fontWeight: 800, fontSize: 14.5, color: 'var(--text)', flex: 1, minWidth: 0 }}>
           {player.name}
         </span>
         {isHumanPlayer && (
