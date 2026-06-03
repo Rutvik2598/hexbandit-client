@@ -96,8 +96,8 @@ function FeatureCard({ icon, kicker, title, desc, accent, enabled, onClick }: Fe
         position: 'relative', textAlign: 'left', flex: 1, minWidth: 0,
         padding: isMobile ? '20px 20px 18px' : '26px 26px 24px', borderRadius: 20, overflow: 'hidden',
         background: hover
-          ? `linear-gradient(165deg, color-mix(in srgb, ${accent} 24%, var(--glass-2)), var(--glass-2))`
-          : `linear-gradient(165deg, color-mix(in srgb, ${accent} 14%, var(--glass-2)), var(--glass-2))`,
+          ? `linear-gradient(165deg, color-mix(in srgb, ${accent} 24%, rgba(20,35,58,0.78)), rgba(20,35,58,0.78))`
+          : `linear-gradient(165deg, color-mix(in srgb, ${accent} 14%, rgba(20,35,58,0.78)), rgba(20,35,58,0.78))`,
         border: `1px solid ${hover ? accent : 'var(--glass-brd)'}`,
         boxShadow: hover
           ? `0 20px 44px -16px ${accent}, inset 0 1px 0 rgba(255,255,255,0.08)`
@@ -243,12 +243,12 @@ function Toast({ msg }: { msg: string | null }) {
     <AnimatePresence>
       {msg && (
         <motion.div
-          initial={{ opacity: 0, y: 16, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 16, scale: 0.96 }}
+          initial={{ opacity: 0, y: 16, scale: 0.96, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
+          exit={{ opacity: 0, y: 16, scale: 0.96, x: '-50%' }}
           transition={{ duration: 0.2 }}
           style={{
-            position: 'fixed', bottom: 30, left: '50%', transform: 'translateX(-50%)',
+            position: 'fixed', bottom: 30, left: '50%',
             zIndex: 200,
             background: 'var(--glass-2)', border: '1px solid var(--glass-brd2)',
             borderRadius: 12, padding: '12px 20px',
@@ -365,7 +365,7 @@ export default function HomePage() {
             kicker="Multiplayer"
             title="Play vs Humans"
             desc="Matchmake against real settlers worldwide in ranked or casual rooms."
-            accent="var(--sapphire-bright)"
+            accent="#4f8dff"
             enabled={false}
             onClick={() => soon('Play vs Humans')}
           />
@@ -374,7 +374,7 @@ export default function HomePage() {
             kicker="Single player"
             title="Play vs Bots"
             desc="Set up a quick match against our AI agents — Easy, Hard or Strongest."
-            accent="var(--amber)"
+            accent="#f0a93a"
             enabled={true}
             onClick={() => navigate('/lobby')}
           />
@@ -402,7 +402,7 @@ export default function HomePage() {
             icon="user"
             title="Profile"
             desc="Stats, rank & history"
-            accent="var(--p-red)"
+            accent="#e44b43"
             enabled={false}
             onClick={() => soon('Profile')}
           />

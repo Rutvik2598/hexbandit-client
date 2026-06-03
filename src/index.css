@@ -120,9 +120,11 @@ button { font-family: var(--ff-ui); cursor: pointer; }
 
 /* ---- frosted panel ---- */
 .panel {
+  background: rgba(15, 27, 47, 0.64);
   background: var(--glass);
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(125, 165, 225, 0.16);
   border: 1px solid var(--glass-brd);
   border-radius: var(--r-lg);
   box-shadow: var(--sh-panel);
@@ -137,7 +139,10 @@ button { font-family: var(--ff-ui); cursor: pointer; }
 .btn {
   border: 1px solid transparent; border-radius: var(--r-md);
   font-weight: 700; color: var(--text);
-  background: var(--glass-hi); border-color: var(--glass-brd);
+  background: rgba(34, 54, 86, 0.55);
+  background: var(--glass-hi);
+  border-color: rgba(125, 165, 225, 0.16);
+  border-color: var(--glass-brd);
   transition: transform .12s ease, background .15s ease, box-shadow .2s ease, border-color .15s;
 }
 .btn:hover { background: var(--bg-3); border-color: var(--glass-brd2); transform: translateY(-1px); }

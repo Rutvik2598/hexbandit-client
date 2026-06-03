@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
-import { getAgents, testApiKey as testKey } from '@/services/api/agentsApi';
+import { getAgents } from '@/services/api/agentsApi';
 import { createGame } from '@/services/api/gamesApi';
-import { setApiKey, getApiKey } from '@/services/api/client';
 import { useGameStore } from '@/store/gameStore';
 import { Icon } from '@/shared/components/Icon';
 import type { AgentConfig } from '@/shared/types/api';
@@ -130,9 +129,6 @@ export default function LobbyPage() {
   const setGameId  = useGameStore(s => s.setGameId);
   const addLog     = useGameStore(s => s.addLog);
 
-  const [apiKeyInput, setApiKeyInput]   = useState(getApiKey());
-  const [apiKeyStatus, setApiKeyStatus] = useState<'idle' | 'testing' | 'valid' | 'invalid'>('idle');
-  const [showApiKey, setShowApiKey]     = useState(!getApiKey());
   const [numPlayers, setNumPlayers]     = useState<2 | 3 | 4>(4);
   const [slots, setSlots]               = useState<PlayerSlot[]>([
     { agentId: 'human' }, { agentId: '' }, { agentId: '' }, { agentId: '' },
@@ -163,16 +159,6 @@ export default function LobbyPage() {
   }, []);
 
   useEffect(() => { loadAgents(numPlayers); }, [numPlayers, loadAgents]);
-  useEffect(() => { if (apiKeyInput) setApiKey(apiKeyInput); }, [apiKeyInput]);
-
-  const handleTestKey = async () => {
-    if (!apiKeyInput.trim()) return;
-    setApiKey(apiKeyInput.trim());
-    setApiKeyStatus('testing');
-    const valid = await testKey();
-    setApiKeyStatus(valid ? 'valid' : 'invalid');
-    if (valid) loadAgents(numPlayers);
-  };
 
   const handleNumPlayersChange = (n: 2 | 3 | 4) => {
     setNumPlayers(n);
@@ -277,75 +263,6 @@ export default function LobbyPage() {
 
         {/* ── Config panel ── */}
         <div className="panel" style={{ padding: isMobile ? 18 : 26, margin: isMobile ? '0 12px' : undefined, boxSizing: 'border-box' }}>
-
-          {/* API Key (collapsible) */}
-          <div style={{ marginBottom: 22 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showApiKey ? 10 : 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div className="eyebrow">API Key</div>
-                {apiKeyStatus === 'valid' && (
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: '#4ade80', letterSpacing: '0.04em' }}>✓ valid</span>
-                )}
-                {apiKeyStatus === 'invalid' && (
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: '#f87171', letterSpacing: '0.04em' }}>✗ invalid</span>
-                )}
-              </div>
-              <button
-                onClick={() => setShowApiKey(v => !v)}
-                style={{
-                  fontSize: 11, fontWeight: 700, color: 'var(--text-faint)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: 'var(--ff-ui)', letterSpacing: '0.08em',
-                }}
-              >
-                {showApiKey ? 'Hide' : 'Edit'}
-              </button>
-            </div>
-
-            <AnimatePresence initial={false}>
-              {showApiKey && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div style={{ display: 'flex', gap: 8, paddingTop: 2 }}>
-                    <input
-                      type="password"
-                      value={apiKeyInput}
-                      onChange={e => setApiKeyInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleTestKey()}
-                      placeholder="cat_..."
-                      style={{
-                        flex: 1, background: 'var(--bg-1)',
-                        border: `1px solid ${
-                          apiKeyStatus === 'valid' ? 'rgba(74,222,128,0.5)' :
-                          apiKeyStatus === 'invalid' ? 'rgba(248,113,113,0.5)' :
-                          'var(--glass-brd)'
-                        }`,
-                        borderRadius: 10, padding: '10px 13px',
-                        fontSize: 13.5, color: 'var(--text)', outline: 'none',
-                        fontFamily: 'var(--ff-ui)',
-                      }}
-                    />
-                    <button
-                      onClick={handleTestKey}
-                      disabled={!apiKeyInput.trim() || apiKeyStatus === 'testing'}
-                      className="btn"
-                      style={{ padding: '10px 18px', fontSize: 13, fontWeight: 700, flexShrink: 0 }}
-                    >
-                      {apiKeyStatus === 'testing' ? '…' : 'Test'}
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: 1, background: 'var(--hairline)', margin: '0 0 22px' }} />
 
           {/* Player count */}
           <div className="eyebrow" style={{ marginBottom: 12 }}>Players</div>
