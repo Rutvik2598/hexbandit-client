@@ -24,6 +24,7 @@ import { ResourceIcon } from '@/shared/components/ResourceIcon';
 import { PLAYER_COLORS, RESOURCE_ORDER } from '@/shared/constants';
 import { GameOverScreen } from '@/features/game-over/GameOverScreen';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { PlacementHint } from '@/features/game-board/PlacementHint';
 import type { PlayableAction, PlayerColor, DevCardType, ResourceCounts, ResourceType } from '@/shared/types/game';
 
 type MobileDrawerTab = 'action' | 'players' | 'trade' | null;
@@ -215,6 +216,14 @@ export default function GamePage() {
   const humanPlayer = humanPlayerIndices.length > 0
     ? gameState?.players[humanPlayerIndices[0]]
     : null;
+
+  // ── Auto-activate BUILD_ROAD during initial placement on all breakpoints ──
+  // ActionPanel has the same logic but isn't mounted on mobile when the drawer
+  // is closed. Centralising it here ensures consistent behaviour everywhere.
+  const isRoadForced = hasBuildRoad && !hasRoll && !hasBuildSettlement && !hasBuildCity && !hasEndTurn && !hasDiscard;
+  useEffect(() => {
+    if (isRoadForced && !isDisabled) setMode('BUILD_ROAD');
+  }, [isRoadForced, isDisabled, setMode]);
 
   const bankResources = (gameState?.bank_resources ?? {}) as ResourceCounts;
 
@@ -857,6 +866,15 @@ export default function GamePage() {
           </div>
         )}
 
+        <PlacementHint
+          mode={mode}
+          gamePhase={gameState?.game_phase}
+          isHumanTurn={isHumanTurn}
+          hasBuildSettlement={hasBuildSettlement}
+          hasBuildRoad={hasBuildRoad}
+          bp={bp}
+        />
+
         {sharedModals}
       </div>
     );
@@ -1149,6 +1167,15 @@ export default function GamePage() {
           </div>
         )}
       </div>
+
+      <PlacementHint
+        mode={mode}
+        gamePhase={gameState?.game_phase}
+        isHumanTurn={isHumanTurn}
+        hasBuildSettlement={hasBuildSettlement}
+        hasBuildRoad={hasBuildRoad}
+        bp={bp}
+      />
 
       {sharedModals}
     </div>

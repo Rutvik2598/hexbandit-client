@@ -103,15 +103,6 @@ button { font-family: var(--ff-ui); cursor: pointer; }
     radial-gradient(900px 700px at 85% 110%, #102a47 0%, transparent 50%),
     linear-gradient(180deg, #0a1626 0%, #060b15 100%);
 }
-.atmos::before {
-  content: "";
-  position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='96' viewBox='0 0 56 96'%3E%3Cpath d='M28 0L56 16V48L28 64L0 48V16Z M28 64L56 80M28 64L0 80' fill='none' stroke='%234a76b0' stroke-width='1' stroke-opacity='0.13'/%3E%3C/svg%3E");
-  background-size: 112px 96px;
-  mask-image: radial-gradient(circle at 50% 45%, black 0%, transparent 72%);
-  -webkit-mask-image: radial-gradient(circle at 50% 45%, black 0%, transparent 72%);
-  opacity: 0.9;
-}
 
 /* ---- scrollbars ---- */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -193,6 +184,16 @@ button { font-family: var(--ff-ui); cursor: pointer; }
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes activityScroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
 }
 
 @keyframes confettiFall {

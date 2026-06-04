@@ -415,10 +415,13 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
     mode === 'BUILD_SETTLEMENT' || (isInitialBuild && mode === 'IDLE')
   ) && legalSettlementNodes.size > 0;
   const showCityHighlights = !disabled && mode === 'BUILD_CITY' && legalCityNodes.size > 0;
-  // Roads: only highlight when the player has explicitly entered BUILD_ROAD mode.
-  // ActionPanel auto-activates BUILD_ROAD when placing the initial road, so that
-  // case is handled without any special-casing here.
-  const showRoadHighlights = !disabled && mode === 'BUILD_ROAD' && legalRoadEdges.size > 0;
+  // Roads: during initial build mirror the settlement behaviour — auto-show in IDLE mode
+  // so mobile/tablet users see legal edges without opening the action drawer.
+  // During normal play, only show when BUILD_ROAD mode is explicitly active.
+  const showRoadHighlights = !disabled && (
+    mode === 'BUILD_ROAD' ||
+    (isInitialBuild && mode === 'IDLE' && legalRoadEdges.size > 0)
+  ) && legalRoadEdges.size > 0;
   const showRobberHighlights = !disabled && (mode === 'MOVE_ROBBER' || phase === 'MOVING_ROBBER') && legalRobberTiles.size > 0;
 
   const handleTileClick = useCallback((tileKey: string) => {
