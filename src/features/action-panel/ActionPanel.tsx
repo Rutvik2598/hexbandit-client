@@ -264,57 +264,6 @@ function ResourcePicker({
   );
 }
 
-// ---- TradeTerms — parse and display current_trade from game state ----------
-
-function TradeTerms({ trade, offererName, offererColor }: {
-  trade: number[];
-  offererName: string;
-  offererColor: string;
-}) {
-  const offered = RESOURCE_ORDER.map((r, i) => ({ r, n: trade[i] ?? 0 })).filter(x => x.n > 0);
-  const wanted  = RESOURCE_ORDER.map((r, i) => ({ r, n: trade[i + 5] ?? 0 })).filter(x => x.n > 0);
-  const color   = PLAYER_COLORS[offererColor as PlayerColor] || '#ccc';
-
-  return (
-    <div style={{
-      padding: '8px 10px', borderRadius: 9,
-      background: 'rgba(255,255,255,0.04)', border: '1px solid var(--hairline)',
-      display: 'flex', flexDirection: 'column', gap: 6,
-    }}>
-      <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text-faint)', textTransform: 'uppercase' }}>
-        <span style={{ color, fontWeight: 800 }}>{offererName}</span> offers
-      </div>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        {/* gives */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          {offered.length > 0
-            ? offered.map(({ r, n }) => (
-                <span key={r} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <ResourceIcon type={r} size={14} shadow={false} />
-                  <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--sapphire-bright)' }}>{n}</span>
-                </span>
-              ))
-            : <span style={{ fontSize: 11, color: 'var(--text-ghost)' }}>nothing</span>
-          }
-        </div>
-        <Icon name="swap" size={13} color="var(--text-ghost)" />
-        {/* wants */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          {wanted.length > 0
-            ? wanted.map(({ r, n }) => (
-                <span key={r} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <ResourceIcon type={r} size={14} shadow={false} />
-                  <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--amber-soft)' }}>{n}</span>
-                </span>
-              ))
-            : <span style={{ fontSize: 11, color: 'var(--text-ghost)' }}>nothing</span>
-          }
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ---- TradeRow — a labelled resource list used in trade panels ---------------
 
 function TradeRow({ label, accent, items }: {
