@@ -153,24 +153,6 @@ function getStrengthLevel(agentId: string, allAgents: AgentConfig[]): number {
   return Math.max(1, Math.min(5, Math.round(1 + (rank / Math.max(sorted.length - 1, 1)) * 4)));
 }
 
-// ── Bot avatar — shows image if present, falls back to gradient + icon ───────
-
-function BotAvatar({ persona, size, iconSize }: { persona: BotPersona; size: number; iconSize: number }) {
-  const [imgFailed, setImgFailed] = useState(false);
-
-  if (!imgFailed) {
-    return (
-      <img
-        src={persona.image}
-        alt={persona.codename}
-        onError={() => setImgFailed(true)}
-        style={{ width: size, height: size, objectFit: 'cover', display: 'block' }}
-      />
-    );
-  }
-
-  return <Icon name="robot" size={iconSize} color="rgba(255,255,255,0.9)" strokeWidth={1.6} />;
-}
 
 // ── Bot picker modal ─────────────────────────────────────────────────────────
 
