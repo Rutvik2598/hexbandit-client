@@ -78,6 +78,33 @@ export default function ReplayControls({ compact = false }: { compact?: boolean 
             {action.description || action.action_type}
           </div>
         )}
+        {/* scrubber */}
+        <div style={{ position: 'relative', height: 24, display: 'flex', alignItems: 'center' }}>
+          <div style={{
+            position: 'absolute', left: 0, right: 0, height: 4,
+            borderRadius: 4, background: 'var(--glass-hi)', border: '1px solid var(--hairline)',
+          }} />
+          <div style={{
+            position: 'absolute', left: 0, height: 4, borderRadius: 4,
+            width: `${pct}%`,
+            background: 'linear-gradient(90deg, var(--amber-deep), var(--amber-soft))',
+            boxShadow: '0 0 8px var(--amber-glow)',
+            transition: 'width 0.1s ease', pointerEvents: 'none',
+          }} />
+          <input
+            type="range" min={0} max={maxStep} value={replayStep}
+            onChange={e => goToStep(parseInt(e.target.value))}
+            style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: 'pointer', margin: 0 }}
+          />
+          <div style={{
+            position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)',
+            width: 14, height: 14, borderRadius: '50%',
+            background: 'linear-gradient(180deg, var(--amber-soft), var(--amber))',
+            border: '2px solid var(--bg-0)', boxShadow: '0 0 10px var(--amber-glow)',
+            pointerEvents: 'none', transition: 'left 0.1s ease',
+          }} />
+        </div>
+
         <div style={{ display: 'flex', gap: 5 }}>
           {transportButtons.map(btn => (
             <button key={btn.title} onClick={btn.onClick} disabled={btn.disabled} title={btn.title}

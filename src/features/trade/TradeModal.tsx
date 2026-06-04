@@ -10,6 +10,7 @@ import { Icon } from '@/shared/components/Icon';
 import { RESOURCE_CONFIG } from '@/features/resource-hand/ResourceStack';
 import type { ResourceType, PlayableAction, ResourceCounts } from '@/shared/types/game';
 import { RESOURCE_ORDER } from '@/shared/constants';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
 interface TradeModalProps {
   hand: ResourceCounts;
@@ -56,13 +57,17 @@ interface TradeChipProps {
   count: number;
   selected: boolean;
   disabled: boolean;
+  compact?: boolean;
   onClick: () => void;
 }
 
-function TradeChip({ resource, mode, rate, count, selected, disabled, onClick }: TradeChipProps) {
+function TradeChip({ resource, mode, rate, count, selected, disabled, compact, onClick }: TradeChipProps) {
   const [hover, setHover] = useState(false);
   const selColor = mode === 'give' ? 'var(--sapphire-bright)' : 'var(--amber)';
   const selGlow  = mode === 'give' ? 'var(--sapphire-glow)'   : 'var(--amber-glow)';
+  const chipW = compact ? 68 : 90;
+  const iconBoxW = compact ? 30 : 38;
+  const iconSz = compact ? 22 : 28;
 
   return (
     <button
@@ -72,8 +77,8 @@ function TradeChip({ resource, mode, rate, count, selected, disabled, onClick }:
       disabled={disabled}
       style={{
         position: 'relative',
-        width: 90,
-        padding: '10px 7px 8px',
+        width: chipW,
+        padding: compact ? '8px 5px 6px' : '10px 7px 8px',
         borderRadius: 13,
         background: selected
           ? `linear-gradient(165deg, color-mix(in srgb, ${resource.color} 40%, #0e1a2e), #0c1626)`
@@ -98,11 +103,11 @@ function TradeChip({ resource, mode, rate, count, selected, disabled, onClick }:
 
       {/* icon */}
       <div style={{
-        width: 38, height: 38, borderRadius: 10, display: 'grid', placeItems: 'center',
+        width: iconBoxW, height: iconBoxW, borderRadius: 10, display: 'grid', placeItems: 'center',
         background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
         marginTop: 2,
       }}>
-        <ResourceIcon type={resource.key} size={28} shadow={false} />
+        <ResourceIcon type={resource.key} size={iconSz} shadow={false} />
       </div>
 
       {/* name */}
@@ -142,6 +147,8 @@ function TradeChip({ resource, mode, rate, count, selected, disabled, onClick }:
 export function TradeModal({ hand, bank, maritimeActions, onConfirm, onClose }: TradeModalProps) {
   const [give, setGive] = useState<ResourceType | null>(null);
   const [recv, setRecv] = useState<ResourceType | null>(null);
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
 
   const ratio  = give ? (rateFor(give, maritimeActions) ?? 4) : 4;
   const action = give && recv ? findAction(give, recv, maritimeActions) : undefined;
@@ -163,7 +170,8 @@ export function TradeModal({ hand, bank, maritimeActions, onConfirm, onClose }: 
         onClick={onClose}
         style={{
           position: 'fixed', inset: 0, zIndex: 200,
-          display: 'grid', placeItems: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: isMobile ? '12px' : 0,
           background: 'rgba(4,8,16,0.65)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
@@ -177,7 +185,8 @@ export function TradeModal({ hand, bank, maritimeActions, onConfirm, onClose }: 
           onClick={e => e.stopPropagation()}
           className="panel"
           style={{
-            width: 580, maxWidth: '94vw', padding: 0, overflow: 'hidden',
+            width: 580, maxWidth: '100%', padding: 0,
+            maxHeight: '92dvh', display: 'flex', flexDirection: 'column',
             background: 'var(--glass-2)', boxShadow: 'var(--sh-pop)',
             borderRadius: 'var(--r-xl)',
           }}
@@ -185,39 +194,43 @@ export function TradeModal({ hand, bank, maritimeActions, onConfirm, onClose }: 
           {/* header */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '15px 22px 12px',
+            padding: isMobile ? '12px 16px 10px' : '15px 22px 12px',
             borderBottom: '1px solid var(--hairline)',
+            flexShrink: 0,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
               <span style={{
                 width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center',
                 background: 'linear-gradient(180deg, color-mix(in srgb,var(--amber) 26%,transparent), transparent)',
                 border: '1px solid var(--amber-deep)',
+                flexShrink: 0,
               }}>
                 <Icon name="bank" size={19} color="var(--amber)" />
               </span>
               <div>
                 <h2 style={{
-                  fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 20, margin: 0,
+                  fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: isMobile ? 17 : 20, margin: 0,
                   letterSpacing: '0.03em', color: 'var(--text)',
                 }}>Trade with Bank</h2>
-                <div style={{ fontSize: 11.5, color: 'var(--text-faint)', fontWeight: 600, marginTop: 2 }}>
-                  Standard rate 4:1 · ports improve your rate
-                </div>
+                {!isMobile && (
+                  <div style={{ fontSize: 11.5, color: 'var(--text-faint)', fontWeight: 600, marginTop: 2 }}>
+                    Standard rate 4:1 · ports improve your rate
+                  </div>
+                )}
               </div>
             </div>
             <button onClick={onClose} className="btn" style={{
-              width: 34, height: 34, padding: 0, display: 'grid', placeItems: 'center', borderRadius: 9,
+              width: 34, height: 34, padding: 0, display: 'grid', placeItems: 'center', borderRadius: 9, flexShrink: 0,
             }}>
               <Icon name="close" size={17} color="var(--text-dim)" />
             </button>
           </div>
 
           {/* body */}
-          <div style={{ padding: '18px 22px 4px' }}>
+          <div style={{ padding: isMobile ? '14px 16px 4px' : '18px 22px 4px', overflowY: 'auto', flex: 1 }}>
             {/* You Give */}
             <div className="eyebrow" style={{ marginBottom: 10, color: 'var(--sapphire-bright)' }}>You Give</div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: isMobile ? 6 : 8, justifyContent: 'center', flexWrap: 'wrap' }}>
               {RESOURCE_CONFIG.map(r => {
                 const rate = rateFor(r.key, maritimeActions);
                 const disabled = rate === null || hand[r.key] < rate;
@@ -230,6 +243,7 @@ export function TradeModal({ hand, bank, maritimeActions, onConfirm, onClose }: 
                     count={hand[r.key] ?? 0}
                     selected={give === r.key}
                     disabled={disabled}
+                    compact={isMobile}
                     onClick={() => { setGive(r.key); if (recv === r.key) setRecv(null); }}
                   />
                 );
@@ -238,7 +252,8 @@ export function TradeModal({ hand, bank, maritimeActions, onConfirm, onClose }: 
 
             {/* exchange arrow */}
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, margin: '12px 0',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+              margin: isMobile ? '10px 0' : '12px 0',
             }}>
               <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
               <div style={{
@@ -266,7 +281,7 @@ export function TradeModal({ hand, bank, maritimeActions, onConfirm, onClose }: 
 
             {/* You Receive */}
             <div className="eyebrow" style={{ marginBottom: 10, color: 'var(--amber-soft)' }}>You Receive</div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: isMobile ? 6 : 8, justifyContent: 'center', flexWrap: 'wrap' }}>
               {RESOURCE_CONFIG.map(r => {
                 const disabled = !give || (bank[r.key] ?? 0) === 0 || r.key === give;
                 return (
@@ -278,6 +293,7 @@ export function TradeModal({ hand, bank, maritimeActions, onConfirm, onClose }: 
                     count={bank[r.key] ?? 0}
                     selected={recv === r.key}
                     disabled={disabled}
+                    compact={isMobile}
                     onClick={() => setRecv(r.key)}
                   />
                 );
@@ -287,28 +303,39 @@ export function TradeModal({ hand, bank, maritimeActions, onConfirm, onClose }: 
 
           {/* footer */}
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '12px 22px 16px',
+            display: 'flex', alignItems: 'center', gap: 10,
+            flexDirection: isMobile ? 'column' : 'row',
+            padding: isMobile ? '10px 16px 14px' : '12px 22px 16px',
             borderTop: '1px solid var(--hairline)',
+            flexShrink: 0,
           }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', minHeight: 20, flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', minHeight: 20, flex: 1, width: isMobile ? '100%' : undefined }}>
               {ok
                 ? <span>Trade <span style={{ color: 'var(--sapphire-bright)' }}>{ratio} {give}</span> for <span style={{ color: 'var(--amber-soft)' }}>1 {recv}</span></span>
                 : <span style={{ color: 'var(--text-faint)' }}>Select a resource to give and one to receive</span>
               }
             </div>
-            <button onClick={onClose} className="btn" style={{ padding: '10px 20px', fontSize: 13, fontWeight: 700 }}>
-              Cancel
-            </button>
-            <button
-              onClick={handleConfirm}
-              disabled={!ok}
-              className={`btn${ok ? ' btn-amber' : ''}`}
-              style={{ padding: '10px 22px', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 7 }}
-            >
-              <Icon name="check" size={15} color={ok ? '#2a1a05' : 'var(--text-faint)'} />
-              Confirm Trade
-            </button>
+            <div style={{ display: 'flex', gap: 10, width: isMobile ? '100%' : undefined }}>
+              <button onClick={onClose} className="btn" style={{
+                padding: '10px 20px', fontSize: 13, fontWeight: 700,
+                flex: isMobile ? 1 : undefined,
+              }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={!ok}
+                className={`btn${ok ? ' btn-amber' : ''}`}
+                style={{
+                  padding: '10px 22px', fontSize: 13, fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  flex: isMobile ? 2 : undefined,
+                }}
+              >
+                <Icon name="check" size={15} color={ok ? '#2a1a05' : 'var(--text-faint)'} />
+                Confirm Trade
+              </button>
+            </div>
           </div>
         </motion.div>
       </motion.div>

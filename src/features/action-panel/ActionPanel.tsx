@@ -9,7 +9,7 @@
  * panel instead of the normal build column.
  */
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useInteractionStore } from '@/store/interactionStore';
 import { DiceTray } from '@/features/dice/DiceTray';
@@ -315,6 +315,37 @@ function TradeTerms({ trade, offererName, offererColor }: {
   );
 }
 
+// ---- TradeRow — a labelled resource list used in trade panels ---------------
+
+function TradeRow({ label, accent, items }: {
+  label: string;
+  accent: string;
+  items: { r: ResourceType; n: number }[];
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <span style={{
+        fontSize: 9, fontWeight: 800, letterSpacing: '0.12em',
+        textTransform: 'uppercase', color: accent,
+      }}>{label}</span>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        {items.length > 0 ? items.map(({ r, n }) => (
+          <span key={r} style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '4px 8px 4px 5px', borderRadius: 7,
+            background: 'rgba(255,255,255,0.05)', border: '1px solid var(--hairline)',
+          }}>
+            <ResourceIcon type={r} size={16} shadow={false} />
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: accent }}>{n}</span>
+          </span>
+        )) : (
+          <span style={{ fontSize: 11, color: 'var(--text-ghost)', fontStyle: 'italic' }}>nothing</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ---- TradeResponse — accept/reject/cancel for non-offerers ----------------
 
 function TradeResponse({ onAction, disabled, actions, trade, players, offererIdx }: {
@@ -335,13 +366,41 @@ function TradeResponse({ onAction, disabled, actions, trade, players, offererIdx
   };
 
   const offerer = players[offererIdx];
+  const offererColor = offerer ? (PLAYER_COLORS[offerer.color as PlayerColor] || '#ccc') : '#ccc';
+
+  // From the RECEIVER's perspective:
+  //   trade[0..4] = what offerer gives  → YOU GET
+  //   trade[5..9] = what offerer wants  → YOU GIVE
+  const youGive = RESOURCE_ORDER.map((r, i) => ({ r, n: trade[i + 5] ?? 0 })).filter(x => x.n > 0);
+  const youGet  = RESOURCE_ORDER.map((r, i) => ({ r, n: trade[i]     ?? 0 })).filter(x => x.n > 0);
 
   return (
-    <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
-      <div className="eyebrow">Trade Offer</div>
-      {offerer && trade.length >= 10 && (
-        <TradeTerms trade={trade} offererName={offerer.name} offererColor={offerer.color} />
-      )}
+    <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+          background: offererColor, boxShadow: `0 0 8px ${offererColor}`,
+        }} />
+        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>
+          {offerer?.name ?? 'Player'} wants to trade
+        </span>
+      </div>
+
+      {/* you give / you get breakdown */}
+      <div style={{
+        borderRadius: 10, overflow: 'hidden',
+        border: '1px solid var(--hairline)',
+      }}>
+        <div style={{ padding: '10px 12px', background: 'rgba(248,113,113,0.06)', borderBottom: '1px solid var(--hairline)' }}>
+          <TradeRow label="You Give" accent="#f87171" items={youGive} />
+        </div>
+        <div style={{ padding: '10px 12px', background: 'rgba(74,222,128,0.06)' }}>
+          <TradeRow label="You Get" accent="#4ade80" items={youGet} />
+        </div>
+      </div>
+
+      {/* action buttons */}
       <div style={{ display: 'flex', gap: 7 }}>
         {hasAccept && (
           <button onClick={() => act('ACCEPT_TRADE')} disabled={disabled}
@@ -383,12 +442,28 @@ function DecideAccepteesPanel({ onAction, disabled, actions, trade, players }: {
     if (a) onAction(a);
   };
 
+  // From the OFFERER's perspective:
+  //   trade[0..4] = what you give
+  //   trade[5..9] = what you get
+  const youGive = RESOURCE_ORDER.map((r, i) => ({ r, n: trade[i]     ?? 0 })).filter(x => x.n > 0);
+  const youGet  = RESOURCE_ORDER.map((r, i) => ({ r, n: trade[i + 5] ?? 0 })).filter(x => x.n > 0);
+
   return (
     <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
       <div className="eyebrow">Choose Trade Partner</div>
-      {trade.length >= 10 && players[trade[10]] && (
-        <TradeTerms trade={trade} offererName="You" offererColor={players[trade[10]]?.color ?? ''} />
+
+      {/* trade summary for the offerer */}
+      {trade.length >= 10 && (
+        <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--hairline)' }}>
+          <div style={{ padding: '8px 12px', background: 'rgba(248,113,113,0.06)', borderBottom: '1px solid var(--hairline)' }}>
+            <TradeRow label="You Give" accent="#f87171" items={youGive} />
+          </div>
+          <div style={{ padding: '8px 12px', background: 'rgba(74,222,128,0.06)' }}>
+            <TradeRow label="You Get" accent="#4ade80" items={youGet} />
+          </div>
+        </div>
       )}
+
       <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)' }}>
         These players accepted — pick one to trade with:
       </div>
@@ -440,9 +515,12 @@ export interface ActionPanelProps {
   onAction: (_: PlayableAction) => void;
   disabled?: boolean;
   width?: number | string;
+  /** On desktop, render trade-response / decide-acceptees as a centred modal
+   *  instead of inline in the bottom-left panel. */
+  floatTrade?: boolean;
 }
 
-export default function ActionPanel({ onAction, disabled, width = 190 }: ActionPanelProps) {
+export default function ActionPanel({ onAction, disabled, width = 190, floatTrade = false }: ActionPanelProps) {
   const gameState     = useGameStore(s => s.gameState);
   const thinking      = useGameStore(s => s.thinking);
   const lastRollDice  = useGameStore(s => s.lastRollDice);
@@ -608,21 +686,61 @@ export default function ActionPanel({ onAction, disabled, width = 190 }: ActionP
 
       {/* Special phase panels — only shown during human's turn */}
       {isHumanTurn && hasDiscard && <DiscardPanel onAction={onAction} disabled={disabled} />}
-      {isHumanTurn && isDecideAcceptees && (
+      {!floatTrade && isHumanTurn && isDecideAcceptees && (
         <DecideAccepteesPanel
           onAction={onAction} disabled={disabled} actions={playableActions}
           trade={currentTrade} players={playersList}
         />
       )}
-      {isHumanTurn && hasTradeResponse && (
+      {!floatTrade && isHumanTurn && hasTradeResponse && (
         <TradeResponse
           onAction={onAction} disabled={disabled} actions={playableActions}
           trade={currentTrade} players={playersList} offererIdx={offererIdx}
         />
       )}
 
-      {/* YoP picker */}
-      {isHumanTurn && hasPlayYop && (
+      {/* Floating centred modal for trade phases (desktop) */}
+      <AnimatePresence>
+        {floatTrade && isHumanTurn && (hasTradeResponse || isDecideAcceptees) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 200,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(4,8,16,0.55)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              pointerEvents: 'auto',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.94, opacity: 0, y: 12 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 12 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              style={{ width: 400, maxWidth: '94vw' }}
+            >
+              {isDecideAcceptees && (
+                <DecideAccepteesPanel
+                  onAction={onAction} disabled={disabled} actions={playableActions}
+                  trade={currentTrade} players={playersList}
+                />
+              )}
+              {hasTradeResponse && (
+                <TradeResponse
+                  onAction={onAction} disabled={disabled} actions={playableActions}
+                  trade={currentTrade} players={playersList} offererIdx={offererIdx}
+                />
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* YoP / Monopoly pickers — inline on mobile/tablet, modal on desktop */}
+      {!floatTrade && isHumanTurn && hasPlayYop && (
         <ResourcePicker
           title={yopPick ? `Year of Plenty — pick 2nd (got ${yopPick})` : 'Year of Plenty — pick 1st resource'}
           onPick={(res) => {
@@ -636,9 +754,7 @@ export default function ActionPanel({ onAction, disabled, width = 190 }: ActionP
           disabled={disabled}
         />
       )}
-
-      {/* Monopoly picker */}
-      {isHumanTurn && hasPlayMono && (
+      {!floatTrade && isHumanTurn && hasPlayMono && (
         <ResourcePicker
           title="Monopoly — pick a resource to claim"
           onPick={(res) => onAction({ action_type: 'PLAY_MONOPOLY', value: RESOURCE_ORDER.indexOf(res) })}
@@ -646,6 +762,56 @@ export default function ActionPanel({ onAction, disabled, width = 190 }: ActionP
           disabled={disabled}
         />
       )}
+
+      {/* Floating modal for YoP / Monopoly (desktop) */}
+      <AnimatePresence>
+        {floatTrade && isHumanTurn && (hasPlayYop || hasPlayMono) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 200,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(4,8,16,0.55)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              pointerEvents: 'auto',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.94, opacity: 0, y: 12 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 12 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              style={{ width: 400, maxWidth: '94vw' }}
+            >
+              {hasPlayYop && (
+                <ResourcePicker
+                  title={yopPick ? `Year of Plenty — pick 2nd (got ${yopPick})` : 'Year of Plenty — pick 1st resource'}
+                  onPick={(res) => {
+                    if (!yopPick) { setYopPick(res); }
+                    else {
+                      onAction({ action_type: 'PLAY_YEAR_OF_PLENTY', value: [RESOURCE_ORDER.indexOf(yopPick), RESOURCE_ORDER.indexOf(res)] });
+                      setYopPick(null);
+                    }
+                  }}
+                  onCancel={() => setYopPick(null)}
+                  disabled={disabled}
+                />
+              )}
+              {hasPlayMono && (
+                <ResourcePicker
+                  title="Monopoly — pick a resource to claim"
+                  onPick={(res) => onAction({ action_type: 'PLAY_MONOPOLY', value: RESOURCE_ORDER.indexOf(res) })}
+                  onCancel={() => {}}
+                  disabled={disabled}
+                />
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Dice tray + action buttons — always rendered to keep panel height stable */}
       <div className="panel" style={{

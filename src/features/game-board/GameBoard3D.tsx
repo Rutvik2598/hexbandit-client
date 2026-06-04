@@ -311,10 +311,23 @@ function PanClamp({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsI
     const ctrl = controlsRef.current;
     if (!ctrl) return;
     const t = ctrl.target;
-    const LIMIT = 9;
-    t.x = Math.max(-LIMIT, Math.min(LIMIT, t.x));
-    t.z = Math.max(-LIMIT, Math.min(LIMIT, t.z));
-    t.y = 0;
+    const LIMIT = 6;
+    const cx = Math.max(-LIMIT, Math.min(LIMIT, t.x));
+    const cz = Math.max(-LIMIT, Math.min(LIMIT, t.z));
+    if (cx !== t.x || cz !== t.z || t.y !== 0) {
+      // Compute the pullback delta and apply it to BOTH target and camera.
+      // This keeps the camera→target offset vector identical, so the viewing
+      // angle never changes at the boundary. No ctrl.update() needed — that
+      // would re-derive camera from OrbitControls' internal spherical state
+      // (relative to the pre-clamp target) and produce the angle jump.
+      const dx = cx - t.x;
+      const dz = cz - t.z;
+      const dy = -t.y;
+      t.x = cx; t.z = cz; t.y = 0;
+      ctrl.object.position.x += dx;
+      ctrl.object.position.y += dy;
+      ctrl.object.position.z += dz;
+    }
   });
   return null;
 }
@@ -395,9 +408,17 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
   }, [playableActions]);
 
   const phase = gameState?.game_phase;
-  const showSettlementHighlights = !disabled && (mode === 'BUILD_SETTLEMENT' || mode === 'IDLE') && legalSettlementNodes.size > 0;
-  const showCityHighlights = !disabled && (mode === 'BUILD_CITY' || mode === 'IDLE') && legalCityNodes.size > 0;
-  const showRoadHighlights = !disabled && (mode === 'BUILD_ROAD' || mode === 'IDLE') && legalRoadEdges.size > 0;
+  const isInitialBuild = phase === 'INITIAL_BUILD';
+  // Settlements: always show during initial placement (player must pick a spot and it's the
+  // only thing they can do); during normal play only show when BUILD_SETTLEMENT mode is active.
+  const showSettlementHighlights = !disabled && (
+    mode === 'BUILD_SETTLEMENT' || (isInitialBuild && mode === 'IDLE')
+  ) && legalSettlementNodes.size > 0;
+  const showCityHighlights = !disabled && mode === 'BUILD_CITY' && legalCityNodes.size > 0;
+  // Roads: only highlight when the player has explicitly entered BUILD_ROAD mode.
+  // ActionPanel auto-activates BUILD_ROAD when placing the initial road, so that
+  // case is handled without any special-casing here.
+  const showRoadHighlights = !disabled && mode === 'BUILD_ROAD' && legalRoadEdges.size > 0;
   const showRobberHighlights = !disabled && (mode === 'MOVE_ROBBER' || phase === 'MOVING_ROBBER') && legalRobberTiles.size > 0;
 
   const handleTileClick = useCallback((tileKey: string) => {

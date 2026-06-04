@@ -100,7 +100,10 @@ function LegalIndicator({ isHovered }: { isHovered?: boolean }) {
   useFrame(({ clock }) => {
     if (!ringRef.current) return;
     const mat = ringRef.current.material as THREE.MeshBasicMaterial;
-    mat.opacity = 0.6 + Math.sin(clock.getElapsedTime() * 3) * 0.15;
+    // Pulse gently; brighter on hover
+    const base = isHovered ? 0.78 : 0.40;
+    const amp  = isHovered ? 0.14 : 0.10;
+    mat.opacity = base + Math.sin(clock.getElapsedTime() * 3) * amp;
   });
 
   return (
@@ -111,19 +114,18 @@ function LegalIndicator({ isHovered }: { isHovered?: boolean }) {
         <meshBasicMaterial transparent opacity={0} depthWrite={false} depthTest={false} />
       </mesh>
 
-      {isHovered && (
-        <mesh ref={ringRef} position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={11}>
-          <ringGeometry args={[0.13, 0.28, 48]} />
-          <meshBasicMaterial
-            color="#2a7040"
-            transparent
-            opacity={0.7}
-            depthWrite={false}
-            depthTest={false}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      )}
+      {/* Ring always visible when legal — not just on hover */}
+      <mesh ref={ringRef} position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={11}>
+        <ringGeometry args={[0.13, 0.28, 48]} />
+        <meshBasicMaterial
+          color={isHovered ? '#90caf9' : '#4f8dff'}
+          transparent
+          opacity={0.38}
+          depthWrite={false}
+          depthTest={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
     </group>
   );
 }

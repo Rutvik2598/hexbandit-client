@@ -8,6 +8,7 @@ import { ResourceIcon } from '@/shared/components/ResourceIcon';
 import { Icon } from '@/shared/components/Icon';
 import { RESOURCE_ORDER, RESOURCE_LABELS, PLAYER_COLORS } from '@/shared/constants';
 import type { ResourceType, ResourceCounts, PlayableAction, PlayerColor } from '@/shared/types/game';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
 interface Props {
   hand: ResourceCounts;
@@ -128,6 +129,8 @@ function TradeLineSummary({ give, want }: {
 export function OfferTradeModal({ hand, players, onConfirm, onClose }: Props) {
   const [give, setGive] = useState<Partial<Record<ResourceType, number>>>({});
   const [want, setWant] = useState<Partial<Record<ResourceType, number>>>({});
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
 
   const totalGive = RESOURCE_ORDER.reduce((s, r) => s + (give[r] ?? 0), 0);
   const totalWant = RESOURCE_ORDER.reduce((s, r) => s + (want[r] ?? 0), 0);
@@ -154,7 +157,8 @@ export function OfferTradeModal({ hand, players, onConfirm, onClose }: Props) {
         onClick={onClose}
         style={{
           position: 'fixed', inset: 0, zIndex: 200,
-          display: 'grid', placeItems: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: isMobile ? '12px' : 0,
           background: 'rgba(4,8,16,0.7)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
@@ -168,7 +172,8 @@ export function OfferTradeModal({ hand, players, onConfirm, onClose }: Props) {
           onClick={e => e.stopPropagation()}
           className="panel"
           style={{
-            width: 540, maxWidth: '94vw', padding: 0, overflow: 'hidden',
+            width: 540, maxWidth: '100%', padding: 0,
+            maxHeight: '92dvh', display: 'flex', flexDirection: 'column',
             background: 'var(--glass-2)', boxShadow: 'var(--sh-pop)',
             borderRadius: 'var(--r-xl)',
           }}
@@ -176,50 +181,64 @@ export function OfferTradeModal({ hand, players, onConfirm, onClose }: Props) {
           {/* header */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '15px 22px 13px',
+            padding: isMobile ? '12px 16px 10px' : '15px 22px 13px',
             borderBottom: '1px solid var(--hairline)',
+            flexShrink: 0,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
               <span style={{
                 width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center',
                 background: 'linear-gradient(180deg, color-mix(in srgb,var(--sapphire-bright) 26%,transparent), transparent)',
                 border: '1px solid var(--sapphire-deep)',
+                flexShrink: 0,
               }}>
                 <Icon name="swap" size={18} color="var(--sapphire-bright)" />
               </span>
               <div>
                 <h2 style={{
-                  fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 19, margin: 0,
+                  fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: isMobile ? 17 : 19, margin: 0,
                   letterSpacing: '0.03em', color: 'var(--text)',
                 }}>Offer Trade</h2>
-                <div style={{ fontSize: 11.5, color: 'var(--text-faint)', fontWeight: 600, marginTop: 2 }}>
-                  Propose a deal to other players
-                  {otherPlayers.length > 0 && (
-                    <span style={{ marginLeft: 6 }}>
-                      — {otherPlayers.map((p, i) => (
-                        <span key={p.index}>
-                          <span style={{ color: PLAYER_COLORS[p.color as PlayerColor] || '#ccc', fontWeight: 800 }}>
-                            {p.name}
+                {!isMobile && (
+                  <div style={{ fontSize: 11.5, color: 'var(--text-faint)', fontWeight: 600, marginTop: 2 }}>
+                    Propose a deal to other players
+                    {otherPlayers.length > 0 && (
+                      <span style={{ marginLeft: 6 }}>
+                        — {otherPlayers.map((p, i) => (
+                          <span key={p.index}>
+                            <span style={{ color: PLAYER_COLORS[p.color as PlayerColor] || '#ccc', fontWeight: 800 }}>
+                              {p.name}
+                            </span>
+                            {i < otherPlayers.length - 1 && ', '}
                           </span>
-                          {i < otherPlayers.length - 1 && ', '}
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                </div>
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <button onClick={onClose} className="btn" style={{
-              width: 34, height: 34, padding: 0, display: 'grid', placeItems: 'center', borderRadius: 9,
+              width: 34, height: 34, padding: 0, display: 'grid', placeItems: 'center', borderRadius: 9, flexShrink: 0,
             }}>
               <Icon name="close" size={17} color="var(--text-dim)" />
             </button>
           </div>
 
-          {/* body — two columns */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+          {/* body — two columns on tablet+, stacked on mobile */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: 0,
+            overflowY: 'auto',
+            flex: 1,
+          }}>
             {/* You Give */}
-            <div style={{ padding: '16px 18px 16px 22px', borderRight: '1px solid var(--hairline)' }}>
+            <div style={{
+              padding: isMobile ? '14px 16px' : '16px 18px 16px 22px',
+              borderRight: isMobile ? 'none' : '1px solid var(--hairline)',
+              borderBottom: isMobile ? '1px solid var(--hairline)' : 'none',
+            }}>
               <div className="eyebrow" style={{ color: 'var(--sapphire-bright)', marginBottom: 10 }}>
                 You Give
               </div>
@@ -243,7 +262,7 @@ export function OfferTradeModal({ hand, players, onConfirm, onClose }: Props) {
             </div>
 
             {/* You Want */}
-            <div style={{ padding: '16px 22px 16px 18px' }}>
+            <div style={{ padding: isMobile ? '14px 16px' : '16px 22px 16px 18px' }}>
               <div className="eyebrow" style={{ color: 'var(--amber-soft)', marginBottom: 10 }}>
                 You Want
               </div>
@@ -269,29 +288,37 @@ export function OfferTradeModal({ hand, players, onConfirm, onClose }: Props) {
 
           {/* footer */}
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '11px 22px 15px',
+            display: 'flex', alignItems: 'center', gap: 10,
+            flexDirection: isMobile ? 'column' : 'row',
+            padding: isMobile ? '10px 16px 14px' : '11px 22px 15px',
             borderTop: '1px solid var(--hairline)',
+            flexShrink: 0,
           }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-dim)', flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-dim)', flex: 1, minWidth: 0, width: isMobile ? '100%' : undefined }}>
               <TradeLineSummary give={give} want={want} />
             </div>
-            <button onClick={onClose} className="btn" style={{ padding: '10px 18px', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              className={`btn${canSubmit ? ' btn-primary' : ''}`}
-              style={{
-                padding: '10px 20px', fontSize: 13, fontWeight: 800, flexShrink: 0,
-                display: 'flex', alignItems: 'center', gap: 7,
-                opacity: canSubmit ? 1 : 0.45,
-              }}
-            >
-              <Icon name="swap" size={15} color={canSubmit ? '#fff' : 'var(--text-faint)'} />
-              Send Offer
-            </button>
+            <div style={{ display: 'flex', gap: 10, width: isMobile ? '100%' : undefined }}>
+              <button onClick={onClose} className="btn" style={{
+                padding: '10px 18px', fontSize: 13, fontWeight: 700,
+                flex: isMobile ? 1 : undefined,
+              }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                className={`btn${canSubmit ? ' btn-primary' : ''}`}
+                style={{
+                  padding: '10px 20px', fontSize: 13, fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  opacity: canSubmit ? 1 : 0.45,
+                  flex: isMobile ? 2 : undefined,
+                }}
+              >
+                <Icon name="swap" size={15} color={canSubmit ? '#fff' : 'var(--text-faint)'} />
+                Send Offer
+              </button>
+            </div>
           </div>
         </motion.div>
       </motion.div>

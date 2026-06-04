@@ -174,7 +174,7 @@ function StandingRow({ ranked, humanLost, isMobile }: {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 }}>
             <span style={{ width: 9, height: 9, borderRadius: '50%', background: color, flexShrink: 0, boxShadow: `0 0 6px ${color}` }} />
-            <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
+            <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
             {markHuman && (
               <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color, padding: '2px 5px', borderRadius: 4, background: `color-mix(in srgb, ${color} 18%, transparent)`, border: `1px solid ${color}`, flexShrink: 0 }}>YOU</span>
             )}
@@ -255,6 +255,7 @@ function StandingRow({ ranked, humanLost, isMobile }: {
 export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onMenu, onReplay, replayLoading }: Props) {
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
+  const isTablet = bp === 'tablet';
 
   const humanColorSet = useMemo(() => new Set(
     humanPlayerIndices.map(i => gameState.players[i]?.color)
@@ -284,7 +285,7 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
   const celebrate = !humanLost;
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', overflow: 'auto' }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 50, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       {/* backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -309,9 +310,11 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
         style={{
           position: 'relative', zIndex: 3,
-          width: isMobile ? '100%' : 780,
-          maxWidth: isMobile ? '100%' : '94vw',
-          padding: isMobile ? '24px 14px 28px' : '44px 0 40px',
+          width: isMobile ? '100%' : isTablet ? '90vw' : 780,
+          maxWidth: isMobile ? '100%' : isTablet ? 680 : '94vw',
+          maxHeight: isMobile ? '100dvh' : undefined,
+          overflowY: isMobile ? 'auto' : undefined,
+          padding: isMobile ? '24px 14px 28px' : isTablet ? '32px 16px 36px' : '44px 0 40px',
         }}
       >
         {/* winner crest */}
@@ -325,18 +328,32 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
 
           <Crown winnerColor={winnerColor} size={isMobile ? 64 : 92} />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, marginTop: isMobile ? 10 : 14 }}>
-            <span style={{ width: isMobile ? 12 : 16, height: isMobile ? 12 : 16, borderRadius: '50%', background: winnerColor, boxShadow: `0 0 16px ${winnerColor}` }} />
-            <h1 style={{
-              fontFamily: 'var(--ff-display)', fontWeight: 700,
-              fontSize: isMobile ? 30 : 50,
-              margin: 0, letterSpacing: '0.02em',
-              background: 'linear-gradient(180deg,#fff,#d6e2f2)',
-              WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-            }}>
-              {winner.name} {winner.name === 'You' ? 'Win' : 'Wins'}
-            </h1>
-          </div>
+          {isMobile ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, maxWidth: 'calc(100vw - 28px)', overflow: 'hidden' }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: winnerColor, boxShadow: `0 0 12px ${winnerColor}` }} />
+              <h1 style={{
+                fontFamily: 'var(--ff-display)', fontWeight: 700,
+                fontSize: 20, margin: 0, letterSpacing: '0.01em',
+                color: '#fff',
+                minWidth: 0, overflow: 'hidden',
+                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {winner.name} {winner.name === 'You' ? 'Win' : 'Wins'}
+              </h1>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
+              <span style={{ width: 16, height: 16, borderRadius: '50%', background: winnerColor, boxShadow: `0 0 16px ${winnerColor}` }} />
+              <h1 style={{
+                fontFamily: 'var(--ff-display)', fontWeight: 700,
+                fontSize: 50, margin: 0, letterSpacing: '0.02em',
+                background: 'linear-gradient(180deg,#fff,#d6e2f2)',
+                WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+              }}>
+                {winner.name} {winner.name === 'You' ? 'Win' : 'Wins'}
+              </h1>
+            </div>
+          )}
 
           <p style={{ margin: `${isMobile ? 8 : 10}px 0 0`, fontSize: isMobile ? 13 : 15, fontWeight: 600, color: 'var(--text-dim)', textAlign: 'center' }}>
             {humanLost && humanRankedEntry ? (

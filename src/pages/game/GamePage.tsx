@@ -78,9 +78,10 @@ export default function GamePage() {
   const [rollKeyCompact, setRollKeyCompact]         = useState(0);
   const [rollPendingCompact, setRollPendingCompact] = useState(false);
 
-  const initialized = useRef(false);
-  const prevGains   = useRef(resourceGains);
-  const prevDiceRef = useRef<typeof lastRollDice>(lastRollDice);
+  const initialized       = useRef(false);
+  const prevGains         = useRef(resourceGains);
+  const prevDiceRef       = useRef<typeof lastRollDice>(lastRollDice);
+  const prevNeedsSpecial  = useRef(false);
 
   // ── Derived game state ─────────────────────────────────────────────────────
   const playableActions = gameState?.playable_actions ?? [];
@@ -158,11 +159,21 @@ export default function GamePage() {
     });
   }, [resourceGains, humanPlayerIndices]);
 
-  // ── Auto-open action drawer on mobile for phases requiring input ───────────
+  // ── Auto-open / auto-close action drawer for trade responses and discard ──
+  // Opens when a special action arrives (trade offer, discard prompt).
+  // Closes when the action resolves — no button tap needed.
+  // Does NOT reopen if the user manually dismissed the drawer.
   useEffect(() => {
     if (bp !== 'mobile') return;
-    if (isHumanTurn && needsSpecialAction) setMobileDrawer('action');
-  }, [bp, needsSpecialAction]); // eslint-disable-line
+    const was = prevNeedsSpecial.current;
+    prevNeedsSpecial.current = needsSpecialAction;
+
+    if (!was && needsSpecialAction && humanPlayerIndices.length > 0 && !replayMode) {
+      setMobileDrawer('action');
+    } else if (was && !needsSpecialAction) {
+      setMobileDrawer(d => d === 'action' ? null : d);
+    }
+  }, [bp, needsSpecialAction]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Close mobile drawer when game ends or replay mode changes ─────────────
   useEffect(() => {
@@ -378,57 +389,60 @@ export default function GamePage() {
         }}>
           {/* Compact top bar */}
           <div className="panel" style={{
-            display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-            borderRadius: 12, pointerEvents: 'auto',
+            display: 'flex', flexDirection: 'column',
+            borderRadius: 12, pointerEvents: 'auto', overflow: 'hidden',
           }}>
-            {/* Logo mark */}
-            <svg width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-              <rect x="3" y="3" width="18" height="18" rx="4.5" fill="#eef3fb"/>
-              <circle cx="8" cy="8" r="1.5" fill="#0e2244"/>
-              <circle cx="16" cy="16" r="1.5" fill="#0e2244"/>
-              <circle cx="12" cy="12" r="1.5" fill="var(--p-red)"/>
-            </svg>
-            <span style={{ fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 14, letterSpacing: '0.05em', color: 'var(--text)', flexShrink: 0 }}>
-              HEX
-            </span>
-
-            {/* Turn info */}
-            {gameState && currentColor && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                <span style={{
-                  width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                  background: PLAYER_COLORS[currentColor],
-                  boxShadow: `0 0 6px ${PLAYER_COLORS[currentColor]}`,
-                }} />
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-dim)' }}>
-                  T{gameState.num_turns}
-                </span>
+            {/* Row 1: Logo + turn info + controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
+              {/* Logo mark */}
+              <svg width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                <rect x="3" y="3" width="18" height="18" rx="4.5" fill="#eef3fb"/>
+                <circle cx="8" cy="8" r="1.5" fill="#0e2244"/>
+                <circle cx="16" cy="16" r="1.5" fill="#0e2244"/>
+                <circle cx="12" cy="12" r="1.5" fill="var(--p-red)"/>
+              </svg>
+              <span style={{ fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 14, letterSpacing: '0.05em', color: 'var(--text)', flexShrink: 0 }}>
+                HEX
               </span>
-            )}
 
-            {/* Eval bar */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <EvalBar compact />
+              {/* Turn info */}
+              {gameState && currentColor && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                    background: PLAYER_COLORS[currentColor],
+                    boxShadow: `0 0 6px ${PLAYER_COLORS[currentColor]}`,
+                  }} />
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-dim)' }}>
+                    T{gameState.num_turns}
+                  </span>
+                </span>
+              )}
+
+              {/* Controls */}
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0, marginLeft: 'auto' }}>
+                {humanPlayerIndices.length === 0 && !replayMode && (
+                  <button onClick={autoPlaying ? stopAutoPlay : startAutoPlay} className="btn"
+                    style={{ padding: '2px 7px', fontSize: 11, fontWeight: 700 }}>
+                    {autoPlaying ? '⏸' : '⏵'}
+                  </button>
+                )}
+                {gameState?.winner && !replayMode && (
+                  <button onClick={handleEnterReplay} disabled={replayLoading} className="btn"
+                    style={{ padding: '2px 7px', fontSize: 11, borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5' }}>
+                    {replayLoading ? '…' : '📼'}
+                  </button>
+                )}
+                {replayMode && (
+                  <button onClick={exitReplay} className="btn" style={{ padding: '2px 7px', fontSize: 11 }}>✕</button>
+                )}
+                <button onClick={handleNewGame} className="btn" style={{ padding: '2px 7px', fontSize: 11 }}>New</button>
+              </div>
             </div>
 
-            {/* Controls */}
-            <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-              {humanPlayerIndices.length === 0 && !replayMode && (
-                <button onClick={autoPlaying ? stopAutoPlay : startAutoPlay} className="btn"
-                  style={{ padding: '4px 10px', fontSize: 12, fontWeight: 700 }}>
-                  {autoPlaying ? '⏸' : '⏵'}
-                </button>
-              )}
-              {gameState?.winner && !replayMode && (
-                <button onClick={handleEnterReplay} disabled={replayLoading} className="btn"
-                  style={{ padding: '4px 10px', fontSize: 12, borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5' }}>
-                  {replayLoading ? '…' : '📼'}
-                </button>
-              )}
-              {replayMode && (
-                <button onClick={exitReplay} className="btn" style={{ padding: '4px 10px', fontSize: 12 }}>✕</button>
-              )}
-              <button onClick={handleNewGame} className="btn" style={{ padding: '4px 10px', fontSize: 12 }}>New</button>
+            {/* Row 2: Eval bar */}
+            <div style={{ padding: '7px 12px 8px', borderTop: '1px solid var(--hairline)' }}>
+              <EvalBar compact />
             </div>
           </div>
 
@@ -459,6 +473,16 @@ export default function GamePage() {
 
         {/* ── Full-screen board (no sidebar offset) ── */}
         {boardEl(0)}
+
+        {/* Hidden bank-anchor points for fly animation – sit at board centre so
+            resource tokens arc downward from the board to the hand bar.
+            These take priority over BankPanel anchors (which only exist when
+            the Players drawer is open) because they appear earlier in the DOM. */}
+        <div style={{ position: 'absolute', left: '50%', top: '42%', zIndex: 0, pointerEvents: 'none' }}>
+          {RESOURCE_ORDER.map(res => (
+            <span key={res} id={`bank-anchor-${res}`} style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }} />
+          ))}
+        </div>
 
         {/* ── Left column: build strip above, DiceTray + Roll/End Turn below ── */}
         {gameState && !replayMode && (
@@ -580,7 +604,7 @@ export default function GamePage() {
               {RESOURCE_ORDER.map(res => {
                 const count = humanPlayer.resources[res as ResourceType] ?? 0;
                 return (
-                  <span key={res} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, padding: '0 7px' }}>
+                  <span key={res} id={`stack-anchor-${res}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, padding: '0 7px' }}>
                     <ResourceIcon type={res as ResourceType} size={16} shadow={false} />
                     <span style={{ fontSize: 10, fontWeight: 800, color: count > 0 ? 'var(--text)' : 'var(--text-ghost)' }}>
                       {count}
@@ -604,7 +628,7 @@ export default function GamePage() {
         {/* ── Replay controls + analysis on mobile ── */}
         {replayMode && gameState && (
           <div style={{
-            position: 'absolute', bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 6px)`,
+            position: 'absolute', bottom: `calc(env(safe-area-inset-bottom, 0px) + 8px)`,
             left: 8, right: 8, zIndex: 15, pointerEvents: 'auto',
             display: 'flex', flexDirection: 'column', gap: 8,
           }}>
@@ -661,6 +685,7 @@ export default function GamePage() {
                             devCards={humanPlayer.dev_cards_private}
                             isMyTurn={isHumanTurn && !isDisabled}
                             onPlayDev={(type) => { handlePlayDev(type); setMobileDrawer(null); }}
+                            stacked
                           />
                         </div>
                       </div>
@@ -671,7 +696,16 @@ export default function GamePage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <PlayerPanel />
                     <div style={{ height: 1, background: 'var(--hairline)' }} />
-                    <GameLog />
+                    {/* Capped scrollable log — doesn't push bank off screen */}
+                    <div style={{ maxHeight: 180, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                      <GameLog />
+                    </div>
+                    <div style={{ height: 1, background: 'var(--hairline)' }} />
+                    <BankPanel
+                      bank={bankResources}
+                      canTrade={canTrade}
+                      onTrade={() => { setShowTradeModal(true); setMobileDrawer(null); }}
+                    />
                   </div>
                 )}
 
@@ -757,69 +791,69 @@ export default function GamePage() {
         </AnimatePresence>
 
         {/* ── Bottom navigation bar ── */}
-        {gameState && (
+        {gameState && !replayMode && (
           <div className="panel mobile-bottom-bar" style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 25,
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px',
             borderRadius: '16px 16px 0 0', background: 'var(--glass-2)',
           }}>
-            {/* Game Menu */}
-            <button
-              onClick={() => setMobileDrawer(d => d === 'action' ? null : 'action')}
-              className={`btn${needsSpecialAction && isHumanTurn && mobileDrawer !== 'action' ? ' btn-amber' : ''}`}
-              style={{
-                flex: 1, padding: '10px 0', fontSize: 12, fontWeight: 700,
-                background: (!needsSpecialAction || !isHumanTurn) && mobileDrawer === 'action' ? 'var(--glass-hi)' : undefined,
-                borderColor: mobileDrawer === 'action' ? 'var(--sapphire-bright)' : undefined,
-                color: mobileDrawer === 'action' ? 'var(--sapphire-bright)' : 'var(--text)',
-              }}
-            >
-              {mobileDrawer === 'action'
-                ? 'Close'
-                : needsSpecialAction && isHumanTurn
-                  ? 'Action!'
-                  : 'Menu'}
-            </button>
+              {/* Game Menu */}
+              <button
+                onClick={() => setMobileDrawer(d => d === 'action' ? null : 'action')}
+                className={`btn${needsSpecialAction && isHumanTurn && mobileDrawer !== 'action' ? ' btn-amber' : ''}`}
+                style={{
+                  flex: 1, padding: '10px 0', fontSize: 12, fontWeight: 700,
+                  background: (!needsSpecialAction || !isHumanTurn) && mobileDrawer === 'action' ? 'var(--glass-hi)' : undefined,
+                  borderColor: mobileDrawer === 'action' ? 'var(--sapphire-bright)' : undefined,
+                  color: mobileDrawer === 'action' ? 'var(--sapphire-bright)' : 'var(--text)',
+                }}
+              >
+                {mobileDrawer === 'action'
+                  ? 'Close'
+                  : needsSpecialAction && isHumanTurn
+                    ? 'Action!'
+                    : 'Menu'}
+              </button>
 
-            <div style={{ width: 1, height: 28, background: 'var(--hairline)', flexShrink: 0 }} />
+              <div style={{ width: 1, height: 28, background: 'var(--hairline)', flexShrink: 0 }} />
 
-            {/* Trade */}
-            <button
-              onClick={() => setMobileDrawer(d => d === 'trade' ? null : 'trade')}
-              className="btn"
-              style={{
-                flex: 1, padding: '10px 0', fontSize: 12, fontWeight: 700,
-                background: mobileDrawer === 'trade'
-                  ? 'color-mix(in srgb, var(--amber) 12%, var(--glass-hi))'
-                  : (canTrade || isOfferTradeAllowed) && !mobileDrawer
-                    ? 'color-mix(in srgb, var(--amber) 6%, rgba(255,255,255,0.02))'
-                    : undefined,
-                borderColor: mobileDrawer === 'trade'
-                  ? 'var(--amber)'
-                  : (canTrade || isOfferTradeAllowed) ? 'rgba(240,169,58,0.3)' : undefined,
-                color: mobileDrawer === 'trade'
-                  ? 'var(--amber-soft)'
-                  : (canTrade || isOfferTradeAllowed) ? 'var(--amber-soft)' : 'var(--text)',
-              }}
-            >
-              Trade
-            </button>
+              {/* Trade */}
+              <button
+                onClick={() => setMobileDrawer(d => d === 'trade' ? null : 'trade')}
+                className="btn"
+                style={{
+                  flex: 1, padding: '10px 0', fontSize: 12, fontWeight: 700,
+                  background: mobileDrawer === 'trade'
+                    ? 'color-mix(in srgb, var(--amber) 12%, var(--glass-hi))'
+                    : (canTrade || isOfferTradeAllowed) && !mobileDrawer
+                      ? 'color-mix(in srgb, var(--amber) 6%, rgba(255,255,255,0.02))'
+                      : undefined,
+                  borderColor: mobileDrawer === 'trade'
+                    ? 'var(--amber)'
+                    : (canTrade || isOfferTradeAllowed) ? 'rgba(240,169,58,0.3)' : undefined,
+                  color: mobileDrawer === 'trade'
+                    ? 'var(--amber-soft)'
+                    : (canTrade || isOfferTradeAllowed) ? 'var(--amber-soft)' : 'var(--text)',
+                }}
+              >
+                Trade
+              </button>
 
-            <div style={{ width: 1, height: 28, background: 'var(--hairline)', flexShrink: 0 }} />
+              <div style={{ width: 1, height: 28, background: 'var(--hairline)', flexShrink: 0 }} />
 
-            {/* Players */}
-            <button
-              onClick={() => setMobileDrawer(d => d === 'players' ? null : 'players')}
-              className="btn"
-              style={{
-                flex: 1, padding: '10px 0', fontSize: 12, fontWeight: 700,
-                background: mobileDrawer === 'players' ? 'var(--glass-hi)' : undefined,
-                borderColor: mobileDrawer === 'players' ? 'var(--sapphire-bright)' : undefined,
-                color: mobileDrawer === 'players' ? 'var(--sapphire-bright)' : 'var(--text)',
-              }}
-            >
-              Players
-            </button>
+              {/* Players */}
+              <button
+                onClick={() => setMobileDrawer(d => d === 'players' ? null : 'players')}
+                className="btn"
+                style={{
+                  flex: 1, padding: '10px 0', fontSize: 12, fontWeight: 700,
+                  background: mobileDrawer === 'players' ? 'var(--glass-hi)' : undefined,
+                  borderColor: mobileDrawer === 'players' ? 'var(--sapphire-bright)' : undefined,
+                  color: mobileDrawer === 'players' ? 'var(--sapphire-bright)' : 'var(--text)',
+                }}
+              >
+                Players
+              </button>
           </div>
         )}
 
@@ -842,65 +876,70 @@ export default function GamePage() {
       {/* ── Top bar ── */}
       <div className="panel" style={{
         position: 'absolute', top: gap, left: gap, right: camOffset, zIndex: 10,
-        display: 'flex', alignItems: 'center', gap: bp === 'tablet' ? 10 : 12,
-        padding: bp === 'tablet' ? '9px 14px' : '10px 16px',
-        borderRadius: 14,
+        display: 'flex', flexDirection: bp === 'tablet' ? 'column' : 'row',
+        alignItems: bp === 'tablet' ? 'stretch' : 'center',
+        gap: 0, padding: 0, borderRadius: 14, overflow: 'hidden',
       }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
-          <svg width="24" height="24" viewBox="0 0 24 24">
-            <rect x="3" y="3" width="18" height="18" rx="4.5" fill="#eef3fb"/>
-            <circle cx="8" cy="8" r="1.5" fill="#0e2244"/>
-            <circle cx="16" cy="16" r="1.5" fill="#0e2244"/>
-            <circle cx="12" cy="12" r="1.5" fill="var(--p-red)"/>
-          </svg>
-          <span style={{
-            fontFamily: 'var(--ff-display)', fontWeight: 700,
-            fontSize: bp === 'tablet' ? 15 : 17,
-            letterSpacing: '0.05em', color: 'var(--text)',
-          }}>
-            HEXBANDIT
-          </span>
-        </div>
-
-        <span style={{ width: 1, height: 20, background: 'var(--hairline)', flexShrink: 0 }} />
-
-        {/* Turn / phase */}
-        {gameState && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-dim)' }}>
-              Turn <span style={{ color: 'var(--text)' }}>{gameState.num_turns}</span>
+        {/* Main row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: bp === 'tablet' ? 10 : 12, padding: bp === 'tablet' ? '9px 14px' : '10px 16px', flex: bp !== 'tablet' ? 1 : undefined }}>
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="4.5" fill="#eef3fb"/>
+              <circle cx="8" cy="8" r="1.5" fill="#0e2244"/>
+              <circle cx="16" cy="16" r="1.5" fill="#0e2244"/>
+              <circle cx="12" cy="12" r="1.5" fill="var(--p-red)"/>
+            </svg>
+            <span style={{
+              fontFamily: 'var(--ff-display)', fontWeight: 700,
+              fontSize: bp === 'tablet' ? 15 : 17,
+              letterSpacing: '0.05em', color: 'var(--text)',
+            }}>
+              HEXBANDIT
             </span>
-            {currentColor && (
-              <>
-                <span style={{ fontSize: 12, color: 'var(--text-ghost)' }}>·</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: PLAYER_COLORS[currentColor] }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: PLAYER_COLORS[currentColor], boxShadow: `0 0 8px ${PLAYER_COLORS[currentColor]}` }} />
-                  {currentColor}'s turn
-                </span>
-                {bp === 'desktop' && (
-                  <>
-                    <span style={{ fontSize: 12, color: 'var(--text-ghost)' }}>·</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>
-                      {formatPhase(gameState.game_phase)}
-                    </span>
-                  </>
-                )}
-              </>
-            )}
           </div>
-        )}
 
-        <span style={{ width: 1, height: 20, background: 'var(--hairline)', flexShrink: 0 }} />
+          <span style={{ width: 1, height: 20, background: 'var(--hairline)', flexShrink: 0 }} />
 
-        {/* Eval bar */}
-        <EvalBar compact />
+          {/* Turn / phase */}
+          {gameState && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-dim)' }}>
+                Turn <span style={{ color: 'var(--text)' }}>{gameState.num_turns}</span>
+              </span>
+              {currentColor && (
+                <>
+                  <span style={{ fontSize: 12, color: 'var(--text-ghost)' }}>·</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: PLAYER_COLORS[currentColor] }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: PLAYER_COLORS[currentColor], boxShadow: `0 0 8px ${PLAYER_COLORS[currentColor]}` }} />
+                    {currentColor}'s turn
+                  </span>
+                  {bp === 'desktop' && (
+                    <>
+                      <span style={{ fontSize: 12, color: 'var(--text-ghost)' }}>·</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>
+                        {formatPhase(gameState.game_phase)}
+                      </span>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Eval bar inline on desktop only */}
+          {bp !== 'tablet' && (
+            <>
+              <span style={{ width: 1, height: 20, background: 'var(--hairline)', flexShrink: 0 }} />
+              <EvalBar compact />
+            </>
+          )}
 
         {/* Right controls */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7 }}>
           {humanPlayerIndices.length === 0 && !replayMode && (
             <button onClick={autoPlaying ? stopAutoPlay : startAutoPlay} className="btn"
-              style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700 }}>
+              style={{ padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
               {autoPlaying ? '⏸ Stop' : '⏵ Auto'}
             </button>
           )}
@@ -910,7 +949,7 @@ export default function GamePage() {
               onClick={handleEnterReplay}
               disabled={replayLoading}
               className="btn"
-              style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5', display: 'flex', alignItems: 'center', gap: 7, opacity: replayLoading ? 0.7 : 1 }}
+              style={{ padding: '4px 12px', fontSize: 12, fontWeight: 700, borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5', display: 'flex', alignItems: 'center', gap: 7, opacity: replayLoading ? 0.7 : 1 }}
             >
               {replayLoading ? (
                 <>
@@ -922,15 +961,21 @@ export default function GamePage() {
           )}
 
           {replayMode && (
-            <button onClick={exitReplay} className="btn" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700 }}>
+            <button onClick={exitReplay} className="btn" style={{ padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
               ✕ Exit Replay
             </button>
           )}
 
-          <button onClick={handleNewGame} className="btn" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700 }}>
+          <button onClick={handleNewGame} className="btn" style={{ padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
             New Game
           </button>
         </div>
+        </div>
+        {bp === 'tablet' && (
+          <div style={{ padding: '7px 14px 9px', borderTop: '1px solid var(--hairline)' }}>
+            <EvalBar compact />
+          </div>
+        )}
       </div>
 
       {/* ── Board ── */}
@@ -945,8 +990,8 @@ export default function GamePage() {
         }}>
           {!replayMode ? (
             bp === 'desktop' ? (
-              /* Desktop: full ActionPanel */
-              <ActionPanel onAction={handleAction} disabled={isDisabled} />
+              /* Desktop: full ActionPanel — trade phases float as a centred modal */
+              <ActionPanel onAction={handleAction} disabled={isDisabled} floatTrade />
             ) : (
               /* Tablet: compact dice + build strip, full ActionPanel only for special phases */
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7, pointerEvents: 'auto' }}>
