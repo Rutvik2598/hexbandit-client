@@ -178,4 +178,4 @@ src/
 
 ## License
 
-Private — all rights reserved.
+[MIT](LICENSE) © 2025 Rutvik Kulkarni
