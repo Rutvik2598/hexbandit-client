@@ -25,7 +25,11 @@ import { PLAYER_COLORS, RESOURCE_ORDER } from '@/shared/constants';
 import { GameOverScreen } from '@/features/game-over/GameOverScreen';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { PlacementHint } from '@/features/game-board/PlacementHint';
-import type { PlayableAction, PlayerColor, DevCardType, ResourceCounts, ResourceType } from '@/shared/types/game';
+import { useSoundEffects } from '@/shared/hooks/useSoundEffects';
+import { playSound, SFX } from '@/shared/hooks/useSound';
+import { AnnouncementBanner } from '@/shared/components/AnnouncementBanner';
+import type { AchievementData } from '@/shared/components/AnnouncementBanner';
+import type { PlayableAction, Player, PlayerColor, DevCardType, ResourceCounts, ResourceType } from '@/shared/types/game';
 
 type MobileDrawerTab = 'action' | 'players' | 'trade' | null;
 
@@ -66,6 +70,8 @@ export default function GamePage() {
   const setShowTradeModal    = useUiStore(s => s.setShowTradeModal);
   const showOfferTradeModal  = useUiStore(s => s.showOfferTradeModal);
   const setShowOfferTradeModal = useUiStore(s => s.setShowOfferTradeModal);
+  const muted           = useUiStore(s => s.muted);
+  const toggleMuted     = useUiStore(s => s.toggleMuted);
 
   const {
     refreshState, evaluatePosition,
@@ -75,14 +81,23 @@ export default function GamePage() {
 
   const [replayLoading, setReplayLoading] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [achievement, setAchievement] = useState<AchievementData | null>(null);
+  const [showYourTurn, setShowYourTurn] = useState(false);
+  const [showYopPicker, setShowYopPicker] = useState(false);
+  const [yopFirstPick, setYopFirstPick] = useState<ResourceType | null>(null);
+  const [showMonoPicker, setShowMonoPicker] = useState(false);
   const [mobileDrawer, setMobileDrawer] = useState<MobileDrawerTab>(null);
   const [rollKeyCompact, setRollKeyCompact]         = useState(0);
   const [rollPendingCompact, setRollPendingCompact] = useState(false);
 
-  const initialized       = useRef(false);
-  const prevGains         = useRef(resourceGains);
-  const prevDiceRef       = useRef<typeof lastRollDice>(lastRollDice);
-  const prevNeedsSpecial  = useRef(false);
+  useSoundEffects();
+
+  const initialized        = useRef(false);
+  const prevGains          = useRef(resourceGains);
+  const prevDiceRef        = useRef<typeof lastRollDice>(lastRollDice);
+  const prevNeedsSpecial   = useRef(false);
+  const prevPlayersRef     = useRef<Player[] | null>(null);
+  const prevHumanTurnRef   = useRef<boolean | null>(null);
 
   // ── Derived game state ─────────────────────────────────────────────────────
   const playableActions = gameState?.playable_actions ?? [];
@@ -193,6 +208,53 @@ export default function GamePage() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [gameId]);
 
+  // ── Largest Army / Longest Road detection ─────────────────────────────────
+  useEffect(() => {
+    if (!gameState || replayMode) return;
+    const players = gameState.players;
+    const prev = prevPlayersRef.current;
+    prevPlayersRef.current = players;
+    if (!prev) return;
+
+    for (const player of players) {
+      const prevP = prev.find(p => p.color === player.color);
+      if (!prevP) continue;
+      if (!prevP.has_largest_army && player.has_largest_army) {
+        setAchievement({ type: 'largest_army', playerName: player.name, playerColor: player.color as PlayerColor });
+        playSound(SFX.achievement, 0.75);
+        return;
+      }
+      if (!prevP.has_longest_road && player.has_longest_road) {
+        setAchievement({ type: 'longest_road', playerName: player.name, playerColor: player.color as PlayerColor });
+        playSound(SFX.achievement, 0.75);
+        return;
+      }
+    }
+  }, [gameState, replayMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!achievement) return;
+    const t = setTimeout(() => setAchievement(null), 4000);
+    return () => clearTimeout(t);
+  }, [achievement]);
+
+  // ── Your Turn detection ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!gameState || replayMode || humanPlayerIndices.length === 0 || gameState.winner) return;
+    const isNowHuman = humanPlayerIndices.includes(gameState.current_player_index);
+    if (prevHumanTurnRef.current === false && isNowHuman) {
+      setShowYourTurn(true);
+      playSound(SFX.yourTurn, 0.7);
+    }
+    prevHumanTurnRef.current = isNowHuman;
+  }, [gameState, replayMode, humanPlayerIndices]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!showYourTurn) return;
+    const t = setTimeout(() => setShowYourTurn(false), 2500);
+    return () => clearTimeout(t);
+  }, [showYourTurn]);
+
   // ── Replay helpers ────────────────────────────────────────────────────────
   const handleEnterReplay = useCallback(async () => {
     setReplayLoading(true);
@@ -227,6 +289,13 @@ export default function GamePage() {
 
   const bankResources = (gameState?.bank_resources ?? {}) as ResourceCounts;
 
+  const devCardsServerAllows = useMemo(() => ({
+    knight:         playableActions.some(a => a.action_type === 'PLAY_KNIGHT_CARD'),
+    year_of_plenty: playableActions.some(a => a.action_type === 'PLAY_YEAR_OF_PLENTY'),
+    monopoly:       playableActions.some(a => a.action_type === 'PLAY_MONOPOLY'),
+    road_building:  playableActions.some(a => a.action_type === 'PLAY_ROAD_BUILDING'),
+  }), [playableActions]);
+
   const maritimeActions = useMemo(() =>
     (gameState?.playable_actions ?? []).filter(a => a.action_type === 'MARITIME_TRADE'),
     [gameState?.playable_actions]);
@@ -249,11 +318,13 @@ export default function GamePage() {
 
   // ── Action handlers ───────────────────────────────────────────────────────
   const handlePlayDev = useCallback((type: DevCardType) => {
+    if (type === 'year_of_plenty') { setShowYopPicker(true); return; }
+    if (type === 'monopoly')       { setShowMonoPicker(true); return; }
     const actionMap: Record<DevCardType, PlayableAction['action_type'] | null> = {
       knight:         'PLAY_KNIGHT_CARD',
       road_building:  'PLAY_ROAD_BUILDING',
-      year_of_plenty: 'PLAY_YEAR_OF_PLENTY',
-      monopoly:       'PLAY_MONOPOLY',
+      year_of_plenty: null,
+      monopoly:       null,
       victory_point:  null,
     };
     const actionType = actionMap[type];
@@ -336,6 +407,12 @@ export default function GamePage() {
   // ── Shared modals (all breakpoints) ───────────────────────────────────────
   const sharedModals = (
     <>
+      <AnnouncementBanner
+        achievement={achievement}
+        yourTurn={showYourTurn && humanPlayerIndices.length > 0}
+        rightOffset={bp === 'mobile' ? 0 : layout.panelW + layout.gap}
+        topOffset={bp === 'mobile' ? 100 : bp === 'tablet' ? 100 : 74}
+      />
       <AnimatePresence>
         {gameState?.winner && !replayMode && (
           <GameOverScreen
@@ -378,6 +455,145 @@ export default function GamePage() {
         onConfirm={confirmNewGame}
         onCancel={() => setShowExitConfirm(false)}
       />
+
+      {/* Year of Plenty picker */}
+      <AnimatePresence>
+        {showYopPicker && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 200,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(4,8,16,0.65)',
+              backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            }}
+            onClick={() => { setShowYopPicker(false); setYopFirstPick(null); }}
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 14 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="panel"
+              style={{ padding: '20px 18px', width: 320, maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: 14 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div>
+                <div className="eyebrow" style={{ marginBottom: 5 }}>Year of Plenty</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-dim)' }}>
+                  {yopFirstPick
+                    ? `Got ${yopFirstPick} — pick your 2nd resource`
+                    : 'Pick your 1st resource'}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {RESOURCE_ORDER.map(res => (
+                  <button
+                    key={res}
+                    onClick={() => {
+                      if (!yopFirstPick) {
+                        setYopFirstPick(res as ResourceType);
+                      } else {
+                        handleAction({ action_type: 'PLAY_YEAR_OF_PLENTY', value: [RESOURCE_ORDER.indexOf(yopFirstPick), RESOURCE_ORDER.indexOf(res)] });
+                        setShowYopPicker(false);
+                        setYopFirstPick(null);
+                      }
+                    }}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                      padding: '10px 8px', borderRadius: 12, minWidth: 52,
+                      background: yopFirstPick === res ? 'var(--glass-hi)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${yopFirstPick === res ? 'var(--sapphire-bright)' : 'var(--glass-brd)'}`,
+                      cursor: 'pointer', transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--glass-hi)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = yopFirstPick === res ? 'var(--glass-hi)' : 'rgba(255,255,255,0.04)'; }}
+                  >
+                    <ResourceIcon type={res as ResourceType} size={26} shadow={false} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {res}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => { setShowYopPicker(false); setYopFirstPick(null); }}
+                className="btn"
+                style={{ padding: '8px 0', fontSize: 12, fontWeight: 700, width: '100%' }}
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Monopoly picker */}
+      <AnimatePresence>
+        {showMonoPicker && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 200,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(4,8,16,0.65)',
+              backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            }}
+            onClick={() => setShowMonoPicker(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 14 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="panel"
+              style={{ padding: '20px 18px', width: 320, maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: 14 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div>
+                <div className="eyebrow" style={{ marginBottom: 5 }}>Monopoly</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-dim)' }}>
+                  Claim all of one resource from every player
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {RESOURCE_ORDER.map(res => (
+                  <button
+                    key={res}
+                    onClick={() => {
+                      handleAction({ action_type: 'PLAY_MONOPOLY', value: RESOURCE_ORDER.indexOf(res) });
+                      setShowMonoPicker(false);
+                    }}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                      padding: '10px 8px', borderRadius: 12, minWidth: 52,
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid var(--glass-brd)',
+                      cursor: 'pointer', transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--glass-hi)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
+                  >
+                    <ResourceIcon type={res as ResourceType} size={26} shadow={false} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {res}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowMonoPicker(false)}
+                className="btn"
+                style={{ padding: '8px 0', fontSize: 12, fontWeight: 700, width: '100%' }}
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 
@@ -446,6 +662,10 @@ export default function GamePage() {
                   <button onClick={exitReplay} className="btn" style={{ padding: '2px 7px', fontSize: 11 }}>✕</button>
                 )}
                 <button onClick={handleNewGame} className="btn" style={{ padding: '2px 7px', fontSize: 11 }}>New</button>
+                <button onClick={toggleMuted} className="btn" title={muted ? 'Unmute' : 'Mute'}
+                  style={{ width: 28, height: 28, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}>
+                  <Icon name={muted ? 'volume-x' : 'volume'} size={13} color={muted ? 'var(--text-ghost)' : 'var(--text-dim)'} />
+                </button>
               </div>
             </div>
 
@@ -694,6 +914,7 @@ export default function GamePage() {
                             devCards={humanPlayer.dev_cards_private}
                             isMyTurn={isHumanTurn && !isDisabled}
                             onPlayDev={(type) => { handlePlayDev(type); setMobileDrawer(null); }}
+                            devCardsServerAllows={isHumanTurn ? devCardsServerAllows : undefined}
                             stacked
                           />
                         </div>
@@ -987,6 +1208,10 @@ export default function GamePage() {
           <button onClick={handleNewGame} className="btn" style={{ padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
             New Game
           </button>
+          <button onClick={toggleMuted} className="btn" title={muted ? 'Unmute' : 'Mute'}
+            style={{ width: 32, height: 32, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}>
+            <Icon name={muted ? 'volume-x' : 'volume'} size={15} color={muted ? 'var(--text-ghost)' : 'var(--text-dim)'} />
+          </button>
         </div>
         </div>
         {bp === 'tablet' && (
@@ -1086,6 +1311,7 @@ export default function GamePage() {
                 devCards={humanPlayer.dev_cards_private}
                 isMyTurn={isHumanTurn && !isDisabled}
                 onPlayDev={handlePlayDev}
+                devCardsServerAllows={isHumanTurn ? devCardsServerAllows : undefined}
               />
             </div>
           )}

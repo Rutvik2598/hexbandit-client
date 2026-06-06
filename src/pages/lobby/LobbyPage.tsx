@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { useBackgroundMusic } from '@/shared/hooks/useBackgroundMusic';
+import { useUiStore } from '@/store/uiStore';
 import type { Breakpoint } from '@/shared/hooks/useBreakpoint';
 import { getAgents } from '@/services/api/agentsApi';
 import { createGame } from '@/services/api/gamesApi';
@@ -497,7 +499,10 @@ function PlayerCard({ colorKey, index, slot, agents, isHuman, agentsLoading, bp,
 // ── Main lobby page ──────────────────────────────────────────────────────────
 
 export default function LobbyPage() {
-  const navigate   = useNavigate();
+  useBackgroundMusic();
+  const navigate     = useNavigate();
+  const muted        = useUiStore(s => s.muted);
+  const toggleMuted  = useUiStore(s => s.toggleMuted);
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
   const isTablet = bp === 'tablet';
@@ -612,6 +617,20 @@ export default function LobbyPage() {
       >
         <Icon name="arrow-left" size={15} color="var(--text-dim)" />
         Home
+      </button>
+
+      {/* mute toggle */}
+      <button
+        onClick={toggleMuted}
+        className="btn"
+        title={muted ? 'Unmute' : 'Mute'}
+        style={{
+          position: 'absolute', top: isMobile ? 14 : 22, right: isMobile ? 16 : 28, zIndex: 10,
+          width: isMobile ? 38 : 42, height: isMobile ? 38 : 42, padding: 0,
+          borderRadius: 999, display: 'grid', placeItems: 'center',
+        }}
+      >
+        <Icon name={muted ? 'volume-x' : 'volume'} size={isMobile ? 17 : 19} color={muted ? 'var(--text-ghost)' : 'var(--text-dim)'} />
       </button>
 
       <motion.div

@@ -7,7 +7,9 @@ import { VideoBackground } from '@/shared/components/VideoBackground';
 import { AuthModal } from './AuthModal';
 import { ProfileModal } from './ProfileModal';
 import { useAuthStore } from '@/store/authStore';
+import { useUiStore } from '@/store/uiStore';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { useBackgroundMusic } from '@/shared/hooks/useBackgroundMusic';
 import type { IconName } from '@/shared/components/Icon';
 
 // ---- Mocked data -----------------------------------------------------------
@@ -757,10 +759,13 @@ function Toast({ msg }: { msg: string | null }) {
 // ---- HomePage --------------------------------------------------------------
 
 export default function HomePage() {
+  useBackgroundMusic();
   const navigate = useNavigate();
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
   const user = useAuthStore(s => s.user);
+  const muted = useUiStore(s => s.muted);
+  const toggleMuted = useUiStore(s => s.toggleMuted);
   const [toast, setToast] = useState<string | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [roomsOpen, setRoomsOpen] = useState(false);
@@ -818,6 +823,14 @@ export default function HomePage() {
           <HomeLogo />
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={toggleMuted}
+            className="btn"
+            style={{ width: isMobile ? 38 : 42, height: isMobile ? 38 : 42, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}
+            title={muted ? 'Unmute' : 'Mute'}
+          >
+            <Icon name={muted ? 'volume-x' : 'volume'} size={isMobile ? 17 : 19} color={muted ? 'var(--text-ghost)' : 'var(--text-dim)'} />
+          </button>
           <button
             onClick={() => soon('Settings')}
             className="btn"

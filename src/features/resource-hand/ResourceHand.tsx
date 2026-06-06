@@ -15,6 +15,8 @@ interface ResourceHandProps {
   onPlayDev: (type: DevCardType) => void;
   /** If true, dev cards stack below resource cards instead of beside them. */
   stacked?: boolean;
+  /** Whether each playable card type is currently allowed by the server. */
+  devCardsServerAllows?: Partial<Record<string, boolean>>;
 }
 
 export function ResourceHand({
@@ -24,6 +26,7 @@ export function ResourceHand({
   buildCost,
   onPlayDev,
   stacked = false,
+  devCardsServerAllows,
 }: ResourceHandProps) {
   const heldTypes = (Object.keys(devCards) as DevCardType[]).filter(t => devCards[t] > 0);
 
@@ -55,6 +58,7 @@ export function ResourceHand({
                   type={t}
                   count={devCards[t]}
                   isMyTurn={isMyTurn}
+                  serverCanPlay={devCardsServerAllows ? devCardsServerAllows[t] : undefined}
                   onPlay={onPlayDev}
                 />
               ))

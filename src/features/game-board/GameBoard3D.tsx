@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Suspense, useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, useTexture } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -335,10 +335,27 @@ function PanClamp({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsI
 function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  const gameState = useGameStore(s => s.gameState);
-  const replayMode = useGameStore(s => s.replayMode);
+  const gameState    = useGameStore(s => s.gameState);
+  const replayMode   = useGameStore(s => s.replayMode);
   const replayFrames = useGameStore(s => s.replayFrames);
-  const replayStep = useGameStore(s => s.replayStep);
+  const replayStep   = useGameStore(s => s.replayStep);
+  const lastRollDice = useGameStore(s => s.lastRollDice);
+
+  const [activeRollSum, setActiveRollSum] = useState<number | null>(null);
+
+  // Highlight producing tiles for 2.8s after each new roll (skip 7 — no tiles produce)
+  useEffect(() => {
+    if (!lastRollDice || replayMode) return;
+    const sum = lastRollDice[0] + lastRollDice[1];
+    if (sum === 7) return;
+    setActiveRollSum(sum);
+  }, [lastRollDice, replayMode]);
+
+  useEffect(() => {
+    if (activeRollSum === null) return;
+    const t = setTimeout(() => setActiveRollSum(null), 2800);
+    return () => clearTimeout(t);
+  }, [activeRollSum]);
 
   const hoveredNode = useInteractionStore(s => s.hoveredNode);
   const hoveredEdge = useInteractionStore(s => s.hoveredEdge);
@@ -529,6 +546,7 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
             texture={tex}
             hasRobber={isRobberHere}
             isLegalRobber={isLegalRobber}
+            isActive={activeRollSum !== null && tile.number === activeRollSum}
             onClick={() => handleTileClick(key)}
             onPointerEnter={() => setHoveredTile(key)}
             onPointerLeave={() => setHoveredTile(null)}

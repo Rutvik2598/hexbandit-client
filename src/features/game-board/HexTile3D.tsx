@@ -89,6 +89,7 @@ interface HexTile3DProps {
   texture: THREE.Texture | null;
   hasRobber?: boolean;
   isLegalRobber?: boolean;
+  isActive?: boolean;
   onClick?: () => void;
   onPointerEnter?: () => void;
   onPointerLeave?: () => void;
@@ -100,11 +101,13 @@ export default function HexTile3D({
   texture,
   hasRobber,
   isLegalRobber,
+  isActive,
   onClick,
   onPointerEnter,
   onPointerLeave,
 }: HexTile3DProps) {
-  const pulseRef = useRef<THREE.Mesh>(null);
+  const pulseRef  = useRef<THREE.Mesh>(null);
+  const activeRef = useRef<THREE.Mesh>(null);
   const beachTex = useTexture('/assets/tiles/beach.jpg');
 
   const beachMaterials = useMemo(() => {
@@ -140,10 +143,17 @@ export default function HexTile3D({
   }, [texture]);
 
   useFrame(({ clock }) => {
-    if (!pulseRef.current || !isLegalRobber) return;
     const t = clock.getElapsedTime();
-    const mat = pulseRef.current.material as THREE.MeshStandardMaterial;
-    mat.opacity = 0.2 + Math.abs(Math.sin(t * 2.2)) * 0.35;
+    if (pulseRef.current && isLegalRobber) {
+      const mat = pulseRef.current.material as THREE.MeshStandardMaterial;
+      mat.opacity = 0.2 + Math.abs(Math.sin(t * 2.2)) * 0.35;
+    }
+    if (activeRef.current && isActive) {
+      const mat = activeRef.current.material as THREE.MeshStandardMaterial;
+      const p = Math.abs(Math.sin(t * 3.0));
+      mat.opacity = 0.12 + p * 0.22;
+      mat.emissiveIntensity = 0.2 + p * 0.6;
+    }
   });
 
   const hasToken = Boolean(tile.resource && tile.number);
@@ -172,6 +182,21 @@ export default function HexTile3D({
         <mesh ref={pulseRef} position={[0, INNER_TOP_Y + 0.002, 0]}>
           <cylinderGeometry args={[INNER_RADIUS, INNER_RADIUS, 0.004, 6]} />
           <meshStandardMaterial color="#64b5f6" transparent opacity={0.35} depthWrite={false} />
+        </mesh>
+      )}
+
+      {/* Active roll glow — pulses only over the number token disc */}
+      {isActive && hasToken && (
+        <mesh ref={activeRef} position={[0, INNER_TOP_Y + TOKEN_H + 0.002, 0]}>
+          <cylinderGeometry args={[TOKEN_RADIUS + 0.08, TOKEN_RADIUS + 0.08, 0.005, 32]} />
+          <meshStandardMaterial
+            color="#ffdd44"
+            emissive="#ff9900"
+            emissiveIntensity={0.3}
+            transparent
+            opacity={0.18}
+            depthWrite={false}
+          />
         </mesh>
       )}
 

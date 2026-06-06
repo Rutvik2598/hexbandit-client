@@ -8,7 +8,7 @@
  * Special phases (discard, move robber, trade response) render an overlay
  * panel instead of the normal build column.
  */
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useInteractionStore } from '@/store/interactionStore';
@@ -53,15 +53,19 @@ interface BuildButtonProps {
 
 function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, available, active, disabled, onClick }: BuildButtonProps) {
   const [hover, setHover] = useState(false);
-  const afford = canAfford(resources, cost);
-  // Clickable only when it's your turn, rolled, server allows it, and you can afford it
-  const ready  = afford && rolled && isMyTurn && available && !disabled;
+  const afford   = canAfford(resources, cost);
+  // Fully actionable: resources, rolled, your turn, server allows it (legal spots + piece limit)
+  const canBuild = afford && rolled && isMyTurn && available;
+  const ready    = canBuild && !disabled;
 
   const bg = hover && ready
     ? 'var(--bg-3)'
-    : afford && isMyTurn
+    : canBuild
     ? 'var(--glass-2)'
     : 'rgba(255,255,255,0.025)';
+
+  // Three opacity levels: ready, can-afford-but-blocked, can't-afford
+  const opacity = canBuild ? 1 : (afford && isMyTurn ? 0.5 : 0.35);
 
   return (
     <button
@@ -73,12 +77,12 @@ function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, avail
         display: 'flex', alignItems: 'center', gap: 10, width: '100%',
         padding: '8px 10px', borderRadius: 11,
         background: active ? 'var(--glass-hi)' : bg,
-        border: `1px solid ${active ? 'var(--sapphire-bright)' : afford && isMyTurn ? 'var(--glass-brd2)' : 'var(--hairline)'}`,
+        border: `1px solid ${active ? 'var(--sapphire-bright)' : canBuild ? 'var(--glass-brd2)' : 'var(--hairline)'}`,
         color: afford ? 'var(--text)' : 'var(--text-faint)',
         textAlign: 'left', cursor: ready ? 'pointer' : 'default',
         transition: 'background 0.15s, border-color 0.15s, transform 0.12s',
         transform: hover && ready ? 'translateY(-1px)' : 'none',
-        opacity: isMyTurn ? (afford ? 1 : 0.55) : 0.4,
+        opacity,
         outline: active ? '2px solid var(--sapphire-bright)' : 'none',
         outlineOffset: 1,
       }}
@@ -108,13 +112,12 @@ function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, avail
         </span>
       </span>
 
-      {/* amber dot — shows whenever you can afford it (your turn or not) */}
-      {afford && (
+      {/* amber dot — only when the action is fully ready */}
+      {canBuild && (
         <span style={{
           width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
           background: 'var(--amber)',
-          boxShadow: isMyTurn ? '0 0 8px var(--amber-glow)' : 'none',
-          opacity: isMyTurn ? 1 : 0.4,
+          boxShadow: '0 0 8px var(--amber-glow)',
         }} />
       )}
     </button>
@@ -230,39 +233,6 @@ function DiscardPanel({ onAction, disabled }: { onAction: (_: PlayableAction) =>
   );
 }
 
-// ---- ResourcePicker (YoP / Monopoly) ------------------------------------
-
-function ResourcePicker({
-  title, onPick, onCancel, disabled,
-}: { title: string; onPick: (_: ResourceType) => void; onCancel: () => void; disabled?: boolean }) {
-  return (
-    <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)' }}>{title}</div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {RESOURCE_ORDER.map(res => (
-          <button key={res} onClick={() => !disabled && onPick(res)} disabled={disabled}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              padding: '8px 6px', borderRadius: 10, background: 'rgba(255,255,255,0.04)',
-              border: '1px solid var(--glass-brd)', cursor: 'pointer', minWidth: 44,
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => { if (!disabled) (e.currentTarget as HTMLElement).style.background = 'var(--glass-hi)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
-          >
-            <ResourceIcon type={res} size={22} shadow={false} />
-            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase' }}>
-              {RESOURCE_LABELS[res]}
-            </span>
-          </button>
-        ))}
-      </div>
-      <button onClick={onCancel} style={{ fontSize: 11, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer' }}>
-        Cancel
-      </button>
-    </div>
-  );
-}
 
 // ---- TradeRow — a labelled resource list used in trade panels ---------------
 
@@ -477,7 +447,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
   const mode          = useInteractionStore(s => s.mode);
   const setMode       = useInteractionStore(s => s.setMode);
 
-  const [yopPick, setYopPick]         = useState<ResourceType | null>(null);
   const [rollPending, setRollPending] = useState(false);
   const [rollKey, setRollKey]         = useState(0);
   const prevDice = useRef<typeof lastRollDice>(lastRollDice);
@@ -496,10 +465,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
   const hasBuildSettlement = playableActions.some(a => a.action_type === 'BUILD_SETTLEMENT');
   const hasBuildCity  = playableActions.some(a => a.action_type === 'BUILD_CITY');
   const hasBuyDev     = playableActions.some(a => a.action_type === 'BUY_DEVELOPMENT_CARD');
-  const hasPlayKnight = playableActions.some(a => a.action_type === 'PLAY_KNIGHT_CARD');
-  const hasPlayYop    = playableActions.some(a => a.action_type === 'PLAY_YEAR_OF_PLENTY');
-  const hasPlayMono   = playableActions.some(a => a.action_type === 'PLAY_MONOPOLY');
-  const hasPlayRoadBuilding = playableActions.some(a => a.action_type === 'PLAY_ROAD_BUILDING');
   const hasDiscard    = phase === 'DISCARDING';
   const hasMoveRobber = phase === 'MOVING_ROBBER';
   const isDecideAcceptees = phase === 'DECIDE_ACCEPTEES';
@@ -542,19 +507,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
 
   const isRolling = rollPending || (!isHumanTurn && thinking.phase !== 'idle' && hasRoll);
 
-  // Maritime give rates
-  const maritimeGiveRates = useMemo(() => {
-    const rates = new Map<ResourceType, number>();
-    for (const a of playableActions) {
-      if (a.action_type !== 'MARITIME_TRADE' || !Array.isArray(a.value)) continue;
-      const val = a.value as (number | null)[];
-      const giveIndices = val.slice(0, -1).filter((v): v is number => v !== null);
-      if (giveIndices.length === 0) continue;
-      const res = RESOURCE_ORDER[giveIndices[0]] as ResourceType;
-      if (res && !rates.has(res)) rates.set(res, giveIndices.length);
-    }
-    return rates;
-  }, [playableActions]);
 
   const isThinking = thinking.phase === 'thinking' || thinking.phase === 'submitting';
 
@@ -568,10 +520,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
     { key: 'devcard',    label: 'Buy Dev Card', iconName: 'devcard'    as const, cost: BUILD_COSTS.devcard,    modeKey: null               as null,  available: hasBuyDev           },
   ];
 
-  const devActions = [
-    hasPlayKnight       && { type: 'PLAY_KNIGHT_CARD'    as const, label: 'Knight',        icon: 'army-badge' as const },
-    hasPlayRoadBuilding && { type: 'PLAY_ROAD_BUILDING'  as const, label: 'Road Building', icon: 'road'       as const },
-  ].filter(Boolean) as Array<{ type: string; label: string; icon: 'army-badge' | 'road' }>;
 
   // ---- persistent status card content ----
   const statusContent = (() => {
@@ -689,78 +637,7 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
       </AnimatePresence>
 
       {/* YoP / Monopoly pickers — inline on mobile/tablet, modal on desktop */}
-      {!floatTrade && isHumanTurn && hasPlayYop && (
-        <ResourcePicker
-          title={yopPick ? `Year of Plenty — pick 2nd (got ${yopPick})` : 'Year of Plenty — pick 1st resource'}
-          onPick={(res) => {
-            if (!yopPick) { setYopPick(res); }
-            else {
-              onAction({ action_type: 'PLAY_YEAR_OF_PLENTY', value: [RESOURCE_ORDER.indexOf(yopPick), RESOURCE_ORDER.indexOf(res)] });
-              setYopPick(null);
-            }
-          }}
-          onCancel={() => setYopPick(null)}
-          disabled={disabled}
-        />
-      )}
-      {!floatTrade && isHumanTurn && hasPlayMono && (
-        <ResourcePicker
-          title="Monopoly — pick a resource to claim"
-          onPick={(res) => onAction({ action_type: 'PLAY_MONOPOLY', value: RESOURCE_ORDER.indexOf(res) })}
-          onCancel={() => {}}
-          disabled={disabled}
-        />
-      )}
 
-      {/* Floating modal for YoP / Monopoly (desktop) */}
-      <AnimatePresence>
-        {floatTrade && isHumanTurn && (hasPlayYop || hasPlayMono) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 200,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(4,8,16,0.55)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              pointerEvents: 'auto',
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 12 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.94, opacity: 0, y: 12 }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              style={{ width: 400, maxWidth: '94vw' }}
-            >
-              {hasPlayYop && (
-                <ResourcePicker
-                  title={yopPick ? `Year of Plenty — pick 2nd (got ${yopPick})` : 'Year of Plenty — pick 1st resource'}
-                  onPick={(res) => {
-                    if (!yopPick) { setYopPick(res); }
-                    else {
-                      onAction({ action_type: 'PLAY_YEAR_OF_PLENTY', value: [RESOURCE_ORDER.indexOf(yopPick), RESOURCE_ORDER.indexOf(res)] });
-                      setYopPick(null);
-                    }
-                  }}
-                  onCancel={() => setYopPick(null)}
-                  disabled={disabled}
-                />
-              )}
-              {hasPlayMono && (
-                <ResourcePicker
-                  title="Monopoly — pick a resource to claim"
-                  onPick={(res) => onAction({ action_type: 'PLAY_MONOPOLY', value: RESOURCE_ORDER.indexOf(res) })}
-                  onCancel={() => {}}
-                  disabled={disabled}
-                />
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Dice tray + action buttons — always rendered to keep panel height stable */}
       <div className="panel" style={{
@@ -854,51 +731,8 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
           />
         ))}
 
-        {/* Dev card action buttons — human turn only */}
-        {isHumanTurn && devActions.length > 0 && (
-          <>
-            <div style={{ height: 1, background: 'var(--hairline)', margin: '2px 0' }} />
-            {devActions.map(d => (
-              <button
-                key={d.type}
-                onClick={() => {
-                  onAction({ action_type: d.type as PlayableAction['action_type'], value: null });
-                  if (d.type === 'PLAY_KNIGHT_CARD') setMode('MOVE_ROBBER');
-                }}
-                disabled={disabled}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 9,
-                  background: 'rgba(150,130,235,0.1)', border: '1px solid rgba(150,130,235,0.3)',
-                  color: '#d4c9f5', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(150,130,235,0.2)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(150,130,235,0.1)'; }}
-              >
-                <Icon name={d.icon} size={15} color="#a98bff" />
-                {d.label}
-              </button>
-            ))}
-          </>
-        )}
       </div>
 
-      {/* Maritime trade rate summary (human only) */}
-      {isHumanTurn && maritimeGiveRates.size > 0 && !hasDiscard && (
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', paddingLeft: 2 }}>
-          {Array.from(maritimeGiveRates.entries()).map(([res, rate]) => (
-            <span key={res} style={{
-              display: 'flex', alignItems: 'center', gap: 3,
-              fontSize: 10.5, fontWeight: 700, color: rate <= 3 ? 'var(--amber-soft)' : 'var(--text-faint)',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid var(--hairline)',
-              borderRadius: 6, padding: '3px 7px',
-            }}>
-              <ResourceIcon type={res} size={12} shadow={false} />
-              {rate}:1
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

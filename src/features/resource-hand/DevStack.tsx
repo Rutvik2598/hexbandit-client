@@ -27,17 +27,21 @@ interface DevStackProps {
   type: DevCardType;
   count: number;
   isMyTurn: boolean;
+  /** False means server doesn't allow playing this card right now (bought this turn or already played one). */
+  serverCanPlay?: boolean;
   onPlay: (type: DevCardType) => void;
 }
 
 const CARD_W = 68;
 const CARD_H = 100;
 
-export function DevStack({ type, count, isMyTurn, onPlay }: DevStackProps) {
+export function DevStack({ type, count, isMyTurn, serverCanPlay, onPlay }: DevStackProps) {
   const [hovered, setHovered] = useState(false);
   const d = DEV_TYPE_CONFIG[type];
 
-  const playable = d.playable && isMyTurn && count > 0;
+  // locked = your turn + have the card + server explicitly says NO
+  const locked   = d.playable && isMyTurn && count > 0 && serverCanPlay === false;
+  const playable = d.playable && isMyTurn && count > 0 && !locked;
   const violet   = d.playable;
   const accent   = violet ? '#a98bff' : 'var(--amber)';
 
@@ -115,6 +119,20 @@ export function DevStack({ type, count, isMyTurn, onPlay }: DevStackProps) {
               <div style={{ position: 'absolute', top: 8, left: 7 }}>
                 <ImgIcon name={d.icon} size={13} />
               </div>
+
+              {/* "NEW — can't play" badge */}
+              {isTop && locked && (
+                <div style={{
+                  position: 'absolute', top: 7, right: 5,
+                  fontSize: 6, fontWeight: 800, letterSpacing: '0.1em',
+                  padding: '2px 5px', borderRadius: 4,
+                  background: 'rgba(250,200,40,0.15)',
+                  border: '1px solid rgba(250,200,40,0.5)',
+                  color: '#ffd04a',
+                }}>
+                  NEW
+                </div>
+              )}
               {/* centre */}
               <div style={{
                 position: 'absolute', inset: 0,
@@ -134,7 +152,12 @@ export function DevStack({ type, count, isMyTurn, onPlay }: DevStackProps) {
                     : '#b8791d',
                   marginTop: 1,
                 }}>
-                  {violet ? (playable ? '▶ Tap to play' : 'Your turn only') : '★ +1 VP held'}
+                  {violet
+                    ? locked   ? "🔒 Can't play now"
+                    : playable ? '▶ Tap to play'
+                               : 'Your turn only'
+                    : '★ +1 VP held'
+                  }
                 </span>
               </div>
               {/* bottom-right rotated icon */}
@@ -153,8 +176,8 @@ export function DevStack({ type, count, isMyTurn, onPlay }: DevStackProps) {
         display: 'flex', alignItems: 'center', gap: 3,
         background: 'linear-gradient(180deg,#fff,#e2dcf0)',
         color: '#2a2152', fontWeight: 800, fontSize: 12,
-        border: `1.5px solid ${playable ? accent : 'var(--bg-1)'}`,
-        boxShadow: playable ? `0 0 12px -2px ${accent}` : '0 4px 9px -3px rgba(0,0,0,0.6)',
+        border: `1.5px solid ${playable ? accent : locked ? 'rgba(250,200,40,0.45)' : 'var(--bg-1)'}`,
+        boxShadow: playable ? `0 0 12px -2px ${accent}` : locked ? '0 0 8px -3px rgba(250,200,40,0.4)' : '0 4px 9px -3px rgba(0,0,0,0.6)',
         zIndex: 60,
       }}>
         {violet
