@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/shared/components/Icon';
 import { PLAYER_COLORS } from '@/shared/constants';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { computePlayerStats, enrichWithActionLog } from '@/shared/utils/computeGameStats';
 import type { GameState, Player, PlayerColor } from '@/shared/types/game';
 
 interface VpChip {
@@ -252,10 +253,138 @@ function StandingRow({ ranked, humanLost, isMobile }: {
   );
 }
 
+// ── Stats table ───────────────────────────────────────────────────────────────
+
+function StatCell({ value, highlight }: { value: string | number; highlight?: boolean }) {
+  return (
+    <td style={{
+      padding: '7px 10px',
+      textAlign: 'center',
+      fontSize: 13,
+      fontWeight: highlight ? 800 : 600,
+      color: highlight ? 'var(--amber-soft)' : 'var(--text-dim)',
+      borderBottom: '1px solid var(--hairline)',
+    }}>
+      {value}
+    </td>
+  );
+}
+
+function StatsTable({ gameState }: { gameState: GameState }) {
+  const baseStats = useMemo(() => computePlayerStats(gameState.players), [gameState.players]);
+  const stats = useMemo(
+    () => enrichWithActionLog(baseStats, gameState.action_log ?? []),
+    [baseStats, gameState.action_log],
+  );
+
+  const rows: Array<{
+    label: string;
+    key: keyof typeof stats[0];
+    suffix?: string;
+    higherIsBetter?: boolean;
+  }> = [
+    { label: 'Roads Built',       key: 'roadsBuilt',         higherIsBetter: true },
+    { label: 'Settlements',       key: 'settlementsOnBoard',  higherIsBetter: true },
+    { label: 'Cities',            key: 'citiesOnBoard',       higherIsBetter: true },
+    { label: 'Longest Road',      key: 'longestRoadLength',   higherIsBetter: true },
+    { label: 'Knights Played',    key: 'knightsPlayed',       higherIsBetter: true },
+    { label: 'Dev Cards Played',  key: 'devTotalPlayed',      higherIsBetter: true },
+    { label: '  · Knight',        key: 'devKnight' },
+    { label: '  · Year of Plenty',key: 'devYop' },
+    { label: '  · Monopoly',      key: 'devMonopoly' },
+    { label: '  · Road Building', key: 'devRoadBuilding' },
+    { label: 'Final Hand (res)',   key: 'finalResources' },
+    { label: 'Final Hand (dev)',   key: 'finalDevCards' },
+  ];
+
+  // Only show action-log-derived rows when log data is present
+  if (stats.some(s => s.resourcesCollected > 0)) {
+    rows.splice(rows.findIndex(r => r.key === 'finalResources'), 0,
+      { label: 'Resources Collected', key: 'resourcesCollected', higherIsBetter: true }
+    );
+  }
+  if (stats.some(s => s.tradesCompleted > 0)) {
+    rows.push({ label: 'Trades Made', key: 'tradesCompleted', higherIsBetter: true });
+  }
+  if (stats.some(s => s.timesRobbed > 0 || s.timesRobbing > 0)) {
+    rows.push(
+      { label: 'Times Stolen From', key: 'timesRobbed' },
+      { label: 'Times Robbed Others', key: 'timesRobbing', higherIsBetter: true },
+    );
+  }
+
+  return (
+    <div style={{ overflowX: 'auto', width: '100%' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+        <thead>
+          <tr>
+            <th style={{
+              padding: '7px 10px',
+              textAlign: 'left',
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--text-ghost)',
+              borderBottom: '1px solid var(--hairline)',
+            }}>
+              Stat
+            </th>
+            {stats.map(s => {
+              const hex = PLAYER_COLORS[s.color as PlayerColor] || '#ccc';
+              return (
+                <th key={s.color} style={{
+                  padding: '7px 10px',
+                  textAlign: 'center',
+                  borderBottom: '1px solid var(--hairline)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: hex, boxShadow: `0 0 6px ${hex}`, flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, fontWeight: 800, color: hex }}>{s.name}</span>
+                  </div>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => {
+            const values = stats.map(s => s[row.key] as number);
+            const best = row.higherIsBetter ? Math.max(...values) : -1;
+            const isSubRow = (row.label as string).startsWith('  ·');
+            return (
+              <tr key={row.key} style={{ background: isSubRow ? 'rgba(0,0,0,0.12)' : 'transparent' }}>
+                <td style={{
+                  padding: isSubRow ? '5px 10px 5px 18px' : '7px 10px',
+                  fontSize: isSubRow ? 11.5 : 12.5,
+                  fontWeight: 600,
+                  color: isSubRow ? 'var(--text-ghost)' : 'var(--text-faint)',
+                  borderBottom: '1px solid var(--hairline)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {row.label}
+                </td>
+                {values.map((val, i) => (
+                  <StatCell
+                    key={stats[i].color}
+                    value={val}
+                    highlight={row.higherIsBetter === true && val === best && best > 0}
+                  />
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onMenu, onReplay, replayLoading }: Props) {
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
   const isTablet = bp === 'tablet';
+  const [showStats, setShowStats] = useState(false);
 
   const humanColorSet = useMemo(() => new Set(
     humanPlayerIndices.map(i => gameState.players[i]?.color)
@@ -384,6 +513,52 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
             <StandingRow key={r.player.color} ranked={r} humanLost={humanLost} isMobile={isMobile} />
           ))}
         </div>
+
+        {/* stats toggle */}
+        <button
+          onClick={() => setShowStats(v => !v)}
+          className="btn"
+          style={{
+            marginTop: isMobile ? 10 : 14,
+            width: '100%',
+            padding: '9px 0',
+            fontSize: 12,
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 7,
+            letterSpacing: '0.04em',
+          }}
+        >
+          <Icon name="target" size={14} color="var(--text-faint)" />
+          {showStats ? 'Hide Stats' : 'Game Stats'}
+          <span style={{
+            fontSize: 10,
+            color: 'var(--text-ghost)',
+            transform: showStats ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.2s',
+            display: 'inline-block',
+          }}>▾</span>
+        </button>
+
+        {/* stats panel */}
+        <AnimatePresence>
+          {showStats && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div className="panel" style={{ marginTop: isMobile ? 8 : 10, padding: isMobile ? '10px 8px' : '12px 14px' }}>
+                <div className="eyebrow" style={{ marginBottom: 10 }}>Performance Breakdown</div>
+                <StatsTable gameState={gameState} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* action buttons */}
         <div style={{

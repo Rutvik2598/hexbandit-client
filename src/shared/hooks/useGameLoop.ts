@@ -4,6 +4,8 @@ import { useInteractionStore } from '@/store/interactionStore';
 import { getGameState, submitMove, deleteGame, getRecording } from '@/services/api/gamesApi';
 import { requestMove, requestEvaluate, pollUntilComplete } from '@/services/api/movesApi';
 import { formatActionLogEvent, extractRollDice, extractRollGains } from '@/shared/utils/actionLog';
+import { sanitizeGameState } from '@/shared/utils/sanitizeGameState';
+import { addToast } from '@/store/toastStore';
 import type { PlayableAction, GameState } from '@/shared/types/game';
 
 type StoreRef = ReturnType<typeof useGameStore.getState>;
@@ -89,11 +91,16 @@ export function useGameLoop() {
     if (!gameId) return false;
     try {
       const s = useGameStore.getState();
-      const perspective = s.humanPlayerIndices.length > 0 ? 'human' : undefined;
-      const state = await getGameState(gameId, {
-        perspectiveColor: perspective,
+      // Use the actual player color (not a generic keyword) so the server can
+      // filter the response to the human player's perspective.
+      const perspectiveColor = s.perspectiveColor ?? undefined;
+      const rawState = await getGameState(gameId, {
+        perspectiveColor,
         actionLogStart: s.actionLogTotal,
       });
+      // Strip private opponent data before storing — prevents dev card
+      // details from appearing in the Zustand store or React DevTools.
+      const state = sanitizeGameState(rawState);
       setGameState(state);
       resetInteraction();
       processActionLog(state, s, addLog, setResourceGains, setLastRollDice, setActionLogTotal);
@@ -101,6 +108,7 @@ export function useGameLoop() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       addLog(`Error refreshing state: ${msg}`, 'error');
+      addToast('Could not load the latest game state. Check your connection.', 'error');
       return false;
     }
   }, [gameId, setGameState, resetInteraction, addLog, setResourceGains, setLastRollDice, setActionLogTotal]);
@@ -169,12 +177,14 @@ export function useGameLoop() {
 
       if (pollResult.status === 'error') {
         addLog(`Move error: ${pollResult.error || 'Unknown'}`, 'error');
+        addToast('The AI ran into an error making its move.', 'error');
         clearThinking();
         return false;
       }
 
       if (!pollResult.result) {
         addLog('Move completed but no result returned', 'error');
+        addToast('The AI move completed but returned no result.', 'warning');
         clearThinking();
         return false;
       }
@@ -190,6 +200,7 @@ export function useGameLoop() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       addLog(`AI move failed: ${msg}`, 'error');
+      addToast('AI move failed. The game will try to continue.', 'error');
       clearThinking();
       return false;
     } finally {
@@ -227,6 +238,7 @@ export function useGameLoop() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       addLog(`Move error: ${msg}`, 'error');
+      addToast('Your move could not be submitted. Please try again.', 'error');
       await refreshState();
     } finally {
       humanInFlight.current = false;
@@ -285,6 +297,7 @@ export function useGameLoop() {
       const recording = await getRecording(gameId);
       if (!recording.frames || recording.frames.length === 0) {
         addLog('No recording available', 'info');
+        addToast('No replay recording available for this game.', 'info');
         return;
       }
       setReplayFrames(recording.frames);
@@ -296,6 +309,7 @@ export function useGameLoop() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       addLog(`Failed to load replay: ${msg}`, 'error');
+      addToast('Could not load the game replay. Please try again.', 'error');
     }
   }, [gameId, setReplayFrames, setReplayStep, setReplayMode, setGameState, addLog]);
 

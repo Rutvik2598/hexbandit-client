@@ -12,11 +12,20 @@ function getAudio(path: string): HTMLAudioElement {
   return audio;
 }
 
-export function playSound(path: string, volume = 0.7): void {
-  if (useUiStore.getState().muted) return;
+/**
+ * Play a sound effect.
+ *
+ * @param path   Path to the audio file (use SFX constants).
+ * @param weight Per-sound loudness weight, 0–1 (default 1.0). Multiplied by
+ *               the user's master volume setting so the relative mix is
+ *               preserved while the overall level respects their preference.
+ */
+export function playSound(path: string, weight = 1.0): void {
+  const { muted, soundVolume } = useUiStore.getState();
+  if (muted) return;
   const audio = getAudio(path);
   audio.currentTime = 0;
-  audio.volume = volume;
+  audio.volume = Math.min(1, (soundVolume / 100) * weight);
   audio.play().catch(() => {});
 }
 

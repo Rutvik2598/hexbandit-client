@@ -27,6 +27,9 @@ import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { PlacementHint } from '@/features/game-board/PlacementHint';
 import { useSoundEffects } from '@/shared/hooks/useSoundEffects';
 import { playSound, SFX } from '@/shared/hooks/useSound';
+import { useKeyboardShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
+import { SettingsPanel } from '@/features/settings/SettingsPanel';
+import { addToast } from '@/store/toastStore';
 import { AnnouncementBanner } from '@/shared/components/AnnouncementBanner';
 import type { AchievementData } from '@/shared/components/AnnouncementBanner';
 import type { PlayableAction, Player, PlayerColor, DevCardType, ResourceCounts, ResourceType } from '@/shared/types/game';
@@ -72,6 +75,8 @@ export default function GamePage() {
   const setShowOfferTradeModal = useUiStore(s => s.setShowOfferTradeModal);
   const muted           = useUiStore(s => s.muted);
   const toggleMuted     = useUiStore(s => s.toggleMuted);
+  const showSettings    = useUiStore(s => s.showSettings);
+  const setShowSettings = useUiStore(s => s.setShowSettings);
 
   const {
     refreshState, evaluatePosition,
@@ -347,6 +352,18 @@ export default function GamePage() {
     await submitAction(action);
   }, [submitAction, setShowOfferTradeModal]);
 
+  // Wire keyboard shortcuts — must come after handleAction is defined.
+  useKeyboardShortcuts({ onAction: handleAction });
+
+  const handleShare = useCallback(() => {
+    if (!gameId) return;
+    const url = `${window.location.origin}/spectate/${gameId}`;
+    navigator.clipboard.writeText(url).then(
+      () => addToast('Spectator link copied to clipboard!', 'success'),
+      () => addToast(`Share this link: ${url}`, 'info', 8000),
+    );
+  }, [gameId]);
+
   // ── Compact dice roll (defined after handleAction to avoid TDZ) ───────────
   const handleCompactRoll = useCallback(() => {
     setRollPendingCompact(true);
@@ -407,9 +424,10 @@ export default function GamePage() {
   // ── Shared modals (all breakpoints) ───────────────────────────────────────
   const sharedModals = (
     <>
+      <SettingsPanel />
       <AnnouncementBanner
         achievement={achievement}
-        yourTurn={showYourTurn && humanPlayerIndices.length > 0}
+        yourTurn={showYourTurn && humanPlayerIndices.length > 0 && gameState?.game_phase !== 'INITIAL_BUILD'}
         rightOffset={bp === 'mobile' ? 0 : layout.panelW + layout.gap}
         topOffset={bp === 'mobile' ? 100 : bp === 'tablet' ? 100 : 74}
       />
@@ -662,9 +680,17 @@ export default function GamePage() {
                   <button onClick={exitReplay} className="btn" style={{ padding: '2px 7px', fontSize: 11 }}>✕</button>
                 )}
                 <button onClick={handleNewGame} className="btn" style={{ padding: '2px 7px', fontSize: 11 }}>New</button>
+                <button onClick={handleShare} className="btn" title="Copy spectator link"
+                  style={{ width: 28, height: 28, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}>
+                  <Icon name="users" size={13} color="var(--text-dim)" />
+                </button>
                 <button onClick={toggleMuted} className="btn" title={muted ? 'Unmute' : 'Mute'}
                   style={{ width: 28, height: 28, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}>
                   <Icon name={muted ? 'volume-x' : 'volume'} size={13} color={muted ? 'var(--text-ghost)' : 'var(--text-dim)'} />
+                </button>
+                <button onClick={() => setShowSettings(!showSettings)} className="btn" title="Settings"
+                  style={{ width: 28, height: 28, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}>
+                  <Icon name="gear" size={13} color="var(--text-dim)" />
                 </button>
               </div>
             </div>
@@ -1088,12 +1114,13 @@ export default function GamePage() {
         )}
 
         <PlacementHint
-          mode={mode}
           gamePhase={gameState?.game_phase}
           isHumanTurn={isHumanTurn}
           hasBuildSettlement={hasBuildSettlement}
           hasBuildRoad={hasBuildRoad}
-          bp={bp}
+          replayMode={replayMode}
+          rightOffset={0}
+          topOffset={100}
         />
 
         {sharedModals}
@@ -1208,9 +1235,18 @@ export default function GamePage() {
           <button onClick={handleNewGame} className="btn" style={{ padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
             New Game
           </button>
+          <button onClick={handleShare} className="btn" title="Copy spectator link"
+            style={{ padding: '4px 10px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Icon name="users" size={13} color="var(--text-dim)" />
+            Share
+          </button>
           <button onClick={toggleMuted} className="btn" title={muted ? 'Unmute' : 'Mute'}
             style={{ width: 32, height: 32, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}>
             <Icon name={muted ? 'volume-x' : 'volume'} size={15} color={muted ? 'var(--text-ghost)' : 'var(--text-dim)'} />
+          </button>
+          <button onClick={() => setShowSettings(!showSettings)} className="btn" title="Settings"
+            style={{ width: 32, height: 32, padding: 0, borderRadius: 999, display: 'grid', placeItems: 'center' }}>
+            <Icon name="gear" size={15} color="var(--text-dim)" />
           </button>
         </div>
         </div>
@@ -1395,12 +1431,13 @@ export default function GamePage() {
       </div>
 
       <PlacementHint
-        mode={mode}
         gamePhase={gameState?.game_phase}
         isHumanTurn={isHumanTurn}
         hasBuildSettlement={hasBuildSettlement}
         hasBuildRoad={hasBuildRoad}
-        bp={bp}
+        replayMode={replayMode}
+        rightOffset={layout.panelW + layout.gap}
+        topOffset={bp === 'tablet' ? 100 : 74}
       />
 
       {sharedModals}

@@ -1,23 +1,26 @@
 import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/shared/components/Icon';
-import type { InteractionMode } from '@/store/interactionStore';
 import type { GamePhase } from '@/shared/types/game';
-import type { Breakpoint } from '@/shared/hooks/useBreakpoint';
 
 interface PlacementHintProps {
-  mode: InteractionMode;
   gamePhase: GamePhase | undefined;
   isHumanTurn: boolean;
   hasBuildSettlement: boolean;
   hasBuildRoad: boolean;
-  bp: Breakpoint;
+  replayMode: boolean;
+  /** Pixels to inset from the right — matches AnnouncementBanner's rightOffset. */
+  rightOffset?: number;
+  /** Pixels from the top of the game container — matches AnnouncementBanner's topOffset. */
+  topOffset?: number;
 }
 
 interface HintConfig {
   icon: 'settlement' | 'road';
   text: string;
   accent: string;
+  shadow: string;
+  border: string;
 }
 
 function getHint(hasBuildSettlement: boolean, hasBuildRoad: boolean): HintConfig | null {
@@ -26,6 +29,8 @@ function getHint(hasBuildSettlement: boolean, hasBuildRoad: boolean): HintConfig
       icon: 'settlement',
       text: 'Place your settlement on a glowing circle',
       accent: 'var(--sapphire-bright)',
+      shadow: 'rgba(63,135,242,0.35)',
+      border: 'rgba(63,135,242,0.4)',
     };
   }
   if (hasBuildRoad) {
@@ -33,25 +38,32 @@ function getHint(hasBuildSettlement: boolean, hasBuildRoad: boolean): HintConfig
       icon: 'road',
       text: 'Place your road on a glowing edge',
       accent: 'var(--amber-soft)',
+      shadow: 'rgba(240,169,58,0.35)',
+      border: 'rgba(240,169,58,0.4)',
     };
   }
   return null;
 }
 
-export function PlacementHint({ gamePhase, isHumanTurn, hasBuildSettlement, hasBuildRoad, bp }: PlacementHintProps) {
+export function PlacementHint({
+  gamePhase,
+  isHumanTurn,
+  hasBuildSettlement,
+  hasBuildRoad,
+  replayMode,
+  rightOffset = 0,
+  topOffset = 74,
+}: PlacementHintProps) {
   const isInitialBuild = gamePhase === 'INITIAL_BUILD';
-  const hint = isInitialBuild && isHumanTurn
+  const hint = !replayMode && isInitialBuild && isHumanTurn
     ? getHint(hasBuildSettlement, hasBuildRoad)
     : null;
 
-  // Track which hints have been shown — each key is only shown once per game
+  // Each hint is only shown once per game session.
   const seen = useRef<Set<string>>(new Set());
   const hintKey = hint?.text ?? null;
   const alreadySeen = hintKey !== null && seen.current.has(hintKey);
 
-  // Mark a hint as seen only after it has been on screen for a moment.
-  // Without the delay, a same-frame re-render (e.g. setMode firing right after
-  // hasBuildRoad becomes true) would mark it seen before the browser paints.
   useEffect(() => {
     if (!hintKey || seen.current.has(hintKey)) return;
     const id = setTimeout(() => { seen.current.add(hintKey); }, 1500);
@@ -60,55 +72,50 @@ export function PlacementHint({ gamePhase, isHumanTurn, hasBuildSettlement, hasB
 
   const shouldShow = hint !== null && !alreadySeen;
 
-  const isMobile = bp === 'mobile';
-  const bottomOffset = isMobile ? 100 : 28;
-
   return (
     <AnimatePresence>
       {shouldShow && hint && (
         <motion.div
           key={hint.text}
-          initial={{ opacity: 0, y: 10, x: '-50%' }}
-          animate={{ opacity: 1, y: 0, x: '-50%' }}
-          exit={{ opacity: 0, y: 6, x: '-50%' }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 0, y: -20, scale: 0.92 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.96 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           style={{
-            position: 'fixed',
-            bottom: bottomOffset,
-            left: '50%',
-            zIndex: 120,
+            position: 'absolute',
+            top: topOffset,
+            left: 0,
+            right: rightOffset,
+            zIndex: 43,
+            display: 'flex',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            padding: isMobile ? '8px 14px' : '9px 16px',
-            borderRadius: 999,
-            background: 'rgba(8,16,30,0.82)',
-            border: '1px solid rgba(125,165,225,0.18)',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
-            boxShadow: '0 4px 24px -8px rgba(0,0,0,0.6)',
-            pointerEvents: 'none',
+            padding: '8px 16px',
+            background: 'rgba(6,11,21,0.88)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: `1px solid ${hint.border}`,
+            borderRadius: 10,
+            boxShadow: `0 4px 20px -6px ${hint.shadow}`,
             whiteSpace: 'nowrap',
-          }}
-        >
-          {/* Pulse dot */}
-          <span style={{
-            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-            background: hint.accent,
-            boxShadow: `0 0 6px ${hint.accent}`,
-            animation: 'thinking-pulse 2s ease-in-out infinite',
-          }} />
-
-          <Icon name={hint.icon} size={isMobile ? 13 : 14} color={hint.accent} strokeWidth={1.8} />
-
-          <span style={{
-            fontSize: isMobile ? 11.5 : 12.5,
-            fontWeight: 600,
-            color: 'var(--text-dim)',
-            letterSpacing: '0.01em',
           }}>
-            {hint.text}
-          </span>
+            <Icon name={hint.icon} size={14} color={hint.accent} strokeWidth={1.8} />
+            <span style={{
+              fontSize: 13,
+              fontWeight: 800,
+              fontFamily: 'var(--ff-display)',
+              letterSpacing: '0.04em',
+              color: hint.accent,
+            }}>
+              {hint.text}
+            </span>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
