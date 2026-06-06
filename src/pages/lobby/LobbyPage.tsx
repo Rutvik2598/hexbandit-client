@@ -618,7 +618,7 @@ export default function LobbyPage() {
         initial={{ opacity: 0, y: 22 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        style={{ position: 'relative', width: isMobile ? '100%' : isTablet ? '92vw' : 580, maxWidth: '100%', padding: isMobile ? '60px 0 40px' : '64px 0 40px', boxSizing: 'border-box' }}
+        style={{ position: 'relative', zIndex: 1, width: isMobile ? '100%' : isTablet ? '92vw' : 580, maxWidth: '100%', padding: isMobile ? '60px 0 40px' : '64px 0 40px', boxSizing: 'border-box' }}
       >
         {/* ── Crest + Title ── */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: isMobile ? 20 : 28 }}>

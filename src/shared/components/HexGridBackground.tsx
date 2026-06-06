@@ -59,7 +59,7 @@ export function HexGridBackground() {
   return (
     <div
       aria-hidden
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}
+      style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}
     >
       <svg
         width="100%" height="100%"

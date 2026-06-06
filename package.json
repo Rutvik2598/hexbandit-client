@@ -24,6 +24,12 @@
     "three": "^0.184.0",
     "zustand": "^5.0.13"
   },
+  "browserslist": [
+    "Chrome >= 87",
+    "Edge >= 88",
+    "Firefox >= 78",
+    "Safari >= 14"
+  ],
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.3",
