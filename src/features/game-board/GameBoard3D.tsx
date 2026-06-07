@@ -161,23 +161,19 @@ function BeachBorder() {
     fragmentShader: BEACH_RING_FRAG,
   }), [texture]);
 
-  // No rotation needed — geometry is already in world XZ at Y=0,
-  // positioned just below tiles (Y=0) and above ocean (Y=-0.12).
   return <mesh geometry={geometry} material={material} position={[0, -0.07, 0]} />;
 }
 
 // ── Sidebar-aware camera ───────────────────────────────────────────────────────
-// Shifts the projection so the board appears centred in the left zone even
-// though the canvas now fills the full screen (including behind the sidebar).
-// setViewOffset tells Three.js to render a sub-region of a wider virtual
-// frustum: world-origin ends up at pixel (W - sidebarWidth) / 2 on screen.
+// setViewOffset renders a sub-region of a wider virtual frustum so the board
+// appears centred in the visible area to the left of the sidebar.
 function SidebarAwareCamera({ sidebarWidth }: { sidebarWidth: number }) {
   const { camera, size } = useThree();
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
     cam.setViewOffset(
       size.width + sidebarWidth, size.height,
-      sidebarWidth, 0,
+      Math.round(sidebarWidth * 0.6), 0,
       size.width, size.height,
     );
     cam.updateProjectionMatrix();
@@ -192,11 +188,6 @@ interface BoardSceneProps {
   disabled?: boolean;
   sidebarWidth?: number;
 }
-
-// Clamps the OrbitControls target so panning can't go further than the board edge
-// ── Analysis overlay ──────────────────────────────────────────────────────────
-// Parses action_taken / best_action from replayAnalysis and renders pulsing
-// torus rings at the corresponding board positions.
 
 function parseActionPos(
   actionType: string,
@@ -315,11 +306,9 @@ function PanClamp({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsI
     const cx = Math.max(-LIMIT, Math.min(LIMIT, t.x));
     const cz = Math.max(-LIMIT, Math.min(LIMIT, t.z));
     if (cx !== t.x || cz !== t.z || t.y !== 0) {
-      // Compute the pullback delta and apply it to BOTH target and camera.
-      // This keeps the camera→target offset vector identical, so the viewing
-      // angle never changes at the boundary. No ctrl.update() needed — that
-      // would re-derive camera from OrbitControls' internal spherical state
-      // (relative to the pre-clamp target) and produce the angle jump.
+          // Apply the clamp delta to both target and camera to preserve the
+      // viewing angle. Calling ctrl.update() would recalculate from internal
+      // spherical state and produce a visible angle jump at the boundary.
       const dx = cx - t.x;
       const dz = cz - t.z;
       const dy = -t.y;
@@ -343,7 +332,6 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
 
   const [activeRollSum, setActiveRollSum] = useState<number | null>(null);
 
-  // Highlight producing tiles for 2.8s after each new roll (skip 7 — no tiles produce)
   useEffect(() => {
     if (!lastRollDice || replayMode) return;
     const sum = lastRollDice[0] + lastRollDice[1];
@@ -376,8 +364,7 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
     ORE:    '/assets/tiles/ore.png',
     DESERT: '/assets/tiles/desert.png',
   });
-  // PNG/JPG files are sRGB-encoded; mark them so Three.js applies the correct
-  // inverse-gamma before lighting instead of treating them as linear data.
+  // PNG/JPG textures are sRGB — mark them so Three.js linearises correctly before lighting.
   Object.values(textures).forEach(t => { t.colorSpace = THREE.SRGBColorSpace; });
 
   const displayState = useMemo(() => {
@@ -430,15 +417,11 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
 
   const phase = gameState?.game_phase;
   const isInitialBuild = phase === 'INITIAL_BUILD';
-  // Settlements: always show during initial placement (player must pick a spot and it's the
-  // only thing they can do); during normal play only show when BUILD_SETTLEMENT mode is active.
   const showSettlementHighlights = !disabled && (
     mode === 'BUILD_SETTLEMENT' || (isInitialBuild && mode === 'IDLE')
   ) && legalSettlementNodes.size > 0;
   const showCityHighlights = !disabled && mode === 'BUILD_CITY' && legalCityNodes.size > 0;
-  // Roads: during initial build mirror the settlement behaviour — auto-show in IDLE mode
-  // so mobile/tablet users see legal edges without opening the action drawer.
-  // During normal play, only show when BUILD_ROAD mode is explicitly active.
+  // During initial build, auto-show roads in IDLE so mobile users see them without opening the drawer.
   const showRoadHighlights = !disabled && (
     mode === 'BUILD_ROAD' ||
     (isInitialBuild && mode === 'IDLE' && legalRoadEdges.size > 0)
@@ -498,7 +481,6 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
     <>
       <SidebarAwareCamera sidebarWidth={sidebarWidth} />
 
-      {/* Lighting — intensities tuned for sRGB-correct textures + NoToneMapping */}
       <ambientLight intensity={1.2} color="#c8deff" />
       <directionalLight
         position={[6, 12, 6]}

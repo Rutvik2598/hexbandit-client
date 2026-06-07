@@ -1,16 +1,5 @@
-/**
- * SpectatorPage — read-only view of any game by its ID.
- *
- * Route: /spectate/:gameId
- *
- * Opens independently of any active game session (meant to be used in a
- * separate tab). Polls the API for live state while the game is in-progress,
- * stops polling once a winner is declared.
- *
- * All existing board/sidebar components read from gameStore, so this page
- * simply populates the store with spectated state and renders the same UI
- * in a fully disabled (no-interaction) mode.
- */
+// Route: /spectate/:gameId — read-only live view that polls the API and populates
+// gameStore in spectator mode (no human players, board fully disabled).
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
@@ -50,7 +39,6 @@ export default function SpectatorPage() {
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(true);
 
-  // Initialise store for spectator mode (no human players, no perspective)
   useEffect(() => {
     if (!gameId) return;
     reset();
@@ -68,7 +56,6 @@ export default function SpectatorPage() {
         setLoading(false);
         setError(null);
 
-        // Feed new action log events into the game log panel
         const actionLog = rawState.action_log ?? [];
         const serverTotal = rawState.action_log_total ?? actionLog.length;
         const newCount = serverTotal - s.actionLogTotal;
@@ -125,7 +112,6 @@ export default function SpectatorPage() {
     }
   }
 
-  // ── Error / Loading states ─────────────────────────────────────────────────
   if (error && !gameState) {
     return (
       <div style={{
@@ -168,12 +154,10 @@ export default function SpectatorPage() {
   return (
     <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', fontFamily: 'var(--ff-ui)' }}>
 
-      {/* ── Board ── */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
         <GameBoard3D onAction={noopAction} disabled sidebarWidth={camOffset} />
       </div>
 
-      {/* ── Top bar ── */}
       <div className="panel" style={{
         position: 'absolute', top: GAP, left: GAP, right: camOffset + GAP, zIndex: 10,
         display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
@@ -243,7 +227,6 @@ export default function SpectatorPage() {
         </div>
       </div>
 
-      {/* ── Right sidebar ── */}
       <div className="panel" style={{
         position: 'absolute', top: GAP, right: GAP, bottom: GAP, width: SIDEBAR_W, zIndex: 10,
         display: 'flex', flexDirection: 'column', padding: 16, gap: 14, overflow: 'hidden',
@@ -258,7 +241,6 @@ export default function SpectatorPage() {
         </div>
       </div>
 
-      {/* ── Game over overlay ── */}
       <AnimatePresence>
         {gameState?.winner && !replayMode && (
           <GameOverScreen

@@ -41,7 +41,6 @@ export const useUiStore = create<UiStore>()(
     }),
     {
       name: 'hb-preferences',
-      // Only persist user preferences — transient UI flags reset on load.
       partialize: (s) => ({ muted: s.muted, soundVolume: s.soundVolume }),
     }
   )

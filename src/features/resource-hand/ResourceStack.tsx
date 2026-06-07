@@ -1,7 +1,4 @@
-/**
- * ResourceStack — a vertical stack of physical resource cards for one resource type.
- * Hovers fans the stack outward. The count chip carries the DOM id required by FlyLayer.
- */
+// The count chip carries the DOM id "stack-anchor-{key}" consumed by FlyLayer.
 import { useState } from 'react';
 import { ResourceIcon } from '@/shared/components/ResourceIcon';
 import type { ResourceType } from '@/shared/types/game';

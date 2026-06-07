@@ -1,13 +1,3 @@
-/**
- * ActionPanel — the bottom-left command zone that floats over the board.
- *
- * Layout:
- *   Left column (fixed 190px): DiceTray + Roll/EndTurn button + Build buttons
- *   (Resource hand is rendered separately in the centre by GamePage)
- *
- * Special phases (discard, move robber, trade response) render an overlay
- * panel instead of the normal build column.
- */
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
@@ -455,7 +445,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
   const phase = gameState?.game_phase;
   const isHumanTurn    = humanIndices.includes(gameState?.current_player_index ?? -1);
   const currentPlayer  = gameState?.players[gameState.current_player_index];
-  // Always use the human player's resources for affordability display
   const humanPlayer    = gameState?.players[humanIndices[0] ?? -1];
   const resources      = humanPlayer?.resources ?? {};
 
@@ -473,23 +462,19 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
     a.action_type === 'CANCEL_TRADE');
   const isOfferTradeAllowed = !!(gameState?.is_trade_allowed) && isHumanTurn && !disabled;
 
-  // current_trade: [give×5, want×5, offererIdx]
   const currentTrade = gameState?.current_trade ?? [];
   const offererIdx   = currentTrade[10] ?? 0;
   const playersList  = (gameState?.players ?? []).map(p => ({ name: p.name, color: p.color }));
 
   const rolled = !hasRoll && !!lastRollDice;
 
-  // Auto-activate road mode when it's the only action (initial placement)
-  // OR when the Road Building dev card is active — END_TURN may still appear
-  // in playable_actions (forfeit road) so we can't block on !hasEndTurn there.
+  // END_TURN may still appear during Road Building (forfeit), so we can't gate on !hasEndTurn.
   const roadIsForced        = hasBuildRoad && !hasRoll && !hasBuildSettlement && !hasBuildCity && !hasEndTurn && !hasDiscard && !hasMoveRobber;
   const isRoadBuildingPhase = phase === 'ROAD_BUILDING' && hasBuildRoad && isHumanTurn;
   useEffect(() => {
     if ((roadIsForced || isRoadBuildingPhase) && !disabled) setMode('BUILD_ROAD');
   }, [roadIsForced, isRoadBuildingPhase, disabled, setMode]);
 
-  // Track roll animation: start when ROLL is submitted, stop when dice arrive
   const handleRoll = () => {
     setRollPending(true);
     setRollKey(k => k + 1);
@@ -497,8 +482,7 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
   };
   useEffect(() => {
     if (!rollPending) {
-      // Keep prevDice in sync so we always know what value was current when the
-      // human clicked Roll — bot rolls update lastRollDice without setting rollPending.
+      // Keep prevDice in sync even when bots roll (rollPending is not set for them).
       prevDice.current = lastRollDice;
       return;
     }
@@ -514,7 +498,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
 
   if (!gameState) return null;
 
-  // Always show all 4 build types; `available` gates clickability (server must allow it)
   const allBuildActions = [
     { key: 'settlement', label: 'Settlement',   iconName: 'settlement' as const, cost: BUILD_COSTS.settlement, modeKey: 'BUILD_SETTLEMENT' as const, available: hasBuildSettlement },
     { key: 'city',       label: 'City',         iconName: 'city'       as const, cost: BUILD_COSTS.city,       modeKey: 'BUILD_CITY'       as const, available: hasBuildCity       },
@@ -545,11 +528,9 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
     return { eyebrow: 'Your Turn', text: 'Awaiting action…', textColor: 'var(--text-faint)' as string, progress: null };
   })();
 
-  // ---- render ----
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width, pointerEvents: 'auto' }}>
 
-      {/* Status / hint card — always rendered, never pops in/out */}
       {statusContent && (
         <div className="panel" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
           <div
@@ -633,10 +614,7 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
         )}
       </AnimatePresence>
 
-      {/* YoP / Monopoly pickers — inline on mobile/tablet, modal on desktop */}
-
-
-      {/* Dice tray + action buttons — always rendered to keep panel height stable */}
+      {/* Dice tray + action buttons */}
       <div className="panel" style={{
         padding: '12px 14px 14px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
@@ -679,7 +657,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
 
       </div>
 
-      {/* Offer Trade — standalone button, only when server allows it */}
       {isHumanTurn && !hasDiscard && !hasMoveRobber && !isDecideAcceptees && !hasTradeResponse && (
         <div className="panel" style={{ padding: '10px 12px' }}>
           <div className="eyebrow" style={{ marginBottom: 8 }}>Player Trade</div>
@@ -702,7 +679,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
         </div>
       )}
 
-      {/* Build column — always visible so layout stays stable */}
       <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
         <div className="eyebrow" style={{ padding: '0 1px 1px' }}>Build</div>
         {allBuildActions.map(b => (

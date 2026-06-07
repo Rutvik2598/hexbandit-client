@@ -1,7 +1,3 @@
-/**
- * ResourceHand — the bottom-centre command zone for the current human player.
- * Shows five resource stacks + dev card stacks side by side.
- */
 import { ResourceStack, RESOURCE_CONFIG } from './ResourceStack';
 import { DevStack, DevHandEmpty } from './DevStack';
 import type { ResourceCounts, DevCardCounts, DevCardType } from '@/shared/types/game';

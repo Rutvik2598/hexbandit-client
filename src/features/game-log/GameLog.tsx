@@ -38,7 +38,6 @@ export default function GameLog() {
           visible.map((entry, i) => {
             const isLast = i === visible.length - 1;
 
-            // Action entries are stored as "COLOR|<html text>"
             let dotColor: string | null = null;
             let html: string = entry.message;
 

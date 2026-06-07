@@ -12,21 +12,6 @@ export const PLAYER_COLORS: Record<PlayerColor, string> = {
   BROWN: '#92400e',
 };
 
-export const PLAYER_COLORS_DARK: Record<PlayerColor, string> = {
-  RED: '#dc2626',
-  BLUE: '#2563eb',
-  ORANGE: '#ea580c',
-  WHITE: '#cbd5e1',
-  BROWN: '#78350f',
-};
-
-export const PLAYER_COLORS_BG: Record<PlayerColor, string> = {
-  RED: 'rgba(239,68,68,0.15)',
-  BLUE: 'rgba(59,130,246,0.15)',
-  ORANGE: 'rgba(249,115,22,0.15)',
-  WHITE: 'rgba(226,232,240,0.10)',
-  BROWN: 'rgba(146,64,14,0.15)',
-};
 
 export const RESOURCE_COLORS: Record<ResourceType, string> = {
   wood: '#16a34a',

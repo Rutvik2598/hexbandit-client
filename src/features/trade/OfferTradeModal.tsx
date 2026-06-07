@@ -1,7 +1,4 @@
-/**
- * OfferTradeModal — compose and submit a player-to-player trade offer.
- * Submits OFFER_TRADE with a 10-element value [give×5, want×5] in RESOURCE_ORDER.
- */
+// Submits OFFER_TRADE with a 10-element value array [give×5, want×5] in RESOURCE_ORDER.
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ResourceIcon } from '@/shared/components/ResourceIcon';

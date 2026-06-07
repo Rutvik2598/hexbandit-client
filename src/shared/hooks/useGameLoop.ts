@@ -36,9 +36,7 @@ function processActionLog(
 
     const html = formatActionLogEvent(event, players);
     if (html !== null) {
-      // Prefix with raw color key so GameLog can resolve the dot color without
-      // trying to parse the player-name HTML span.
-      addLog(`${event.color}|${html}`, 'action', true);
+        addLog(`${event.color}|${html}`, 'action', true);
     }
   }
 
@@ -79,8 +77,7 @@ export function useGameLoop() {
     return humanPlayerIndices.includes(currentIdx);
   }, [gameState, humanPlayerIndices]);
 
-  // Always reads latest store state — use this after any async operation
-  // to avoid stale closure reads from useCallback captures.
+  // Reads fresh store state — safe to call from async callbacks that may capture stale closures.
   const isCurrentPlayerHumanNow = () => {
     const s = useGameStore.getState();
     if (!s.gameState) return false;
@@ -91,9 +88,7 @@ export function useGameLoop() {
     if (!gameId) return false;
     try {
       const s = useGameStore.getState();
-      // Use the actual player color (not a generic keyword) so the server can
-      // filter the response to the human player's perspective.
-      const perspectiveColor = s.perspectiveColor ?? undefined;
+          const perspectiveColor = s.perspectiveColor ?? undefined;
       const rawState = await getGameState(gameId, {
         perspectiveColor,
         actionLogStart: s.actionLogTotal,
@@ -110,7 +105,6 @@ export function useGameLoop() {
     }
   }, [gameId, setGameState, resetInteraction, addLog, setResourceGains, setLastRollDice, setActionLogTotal]);
 
-  // Always reads fresh store state — safe to call from any async context
   const evaluatePosition = useCallback(async () => {
     if (evaluatingRef.current) return;
     const s = useGameStore.getState();
@@ -139,7 +133,7 @@ export function useGameLoop() {
         updatePwin(pollResult.pwin_result);
       }
     } catch {
-      // Eval is best-effort, silently ignore
+      // Silently ignore — eval is best-effort
     } finally {
       evaluatingRef.current = false;
       setEvaluating(false);
@@ -148,8 +142,6 @@ export function useGameLoop() {
 
   const doAiMove = useCallback(async (): Promise<boolean> => {
     if (!gameId || aiInFlight.current) return false;
-
-    // Primary guard: always read fresh store — never run during human turn
     if (isCurrentPlayerHumanNow()) return false;
 
     const currentState = useGameStore.getState().gameState;
@@ -157,7 +149,6 @@ export function useGameLoop() {
 
     const agentId = currentState.current_player_agent_id;
 
-    // Secondary guard: if server explicitly marks player as human
     if (agentId === 'human') return false;
 
     aiInFlight.current = true;
@@ -208,7 +199,6 @@ export function useGameLoop() {
   const submitAction = useCallback(async (action: PlayableAction) => {
     if (!gameId || humanInFlight.current) return;
     humanInFlight.current = true;
-    // Drop stale suggestions immediately so the panel doesn't show opponent-turn data.
     clearActionsPwin();
 
     const requestStep = gameState?.action_step ?? 0;
@@ -224,7 +214,6 @@ export function useGameLoop() {
       const ok = await refreshState();
       if (!ok) return;
 
-      // Trigger eval if state advanced
       const newStep = useGameStore.getState().gameState?.action_step ?? 0;
       if (newStep > requestStep) {
         evaluatePosition();
@@ -326,7 +315,6 @@ export function useGameLoop() {
   return {
     refreshState,
     evaluatePosition,
-    doAiMove,
     submitAction,
     autoAdvanceAI,
     startAutoPlay,

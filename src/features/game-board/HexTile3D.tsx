@@ -159,7 +159,6 @@ export default function HexTile3D({
   });
 
   const hasToken = Boolean(tile.resource && tile.number);
-  // Robber stands on top of the token disc when present, tile surface otherwise
   const robberBaseY = hasToken ? TOKEN_TOP_Y : INNER_TOP_Y;
 
   return (
@@ -169,17 +168,14 @@ export default function HexTile3D({
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
     >
-      {/* Outer slab — full tile radius, beach texture on all faces */}
       <mesh material={beachMaterials} receiveShadow castShadow>
         <cylinderGeometry args={[TILE_RADIUS, TILE_RADIUS, HEX_DEPTH, 6]} />
       </mesh>
 
-      {/* Inner slab — resource texture */}
       <mesh material={resourceMaterials} receiveShadow castShadow>
         <cylinderGeometry args={[INNER_RADIUS, INNER_RADIUS, HEX_DEPTH + 0.004, 6]} />
       </mesh>
 
-      {/* Legal / preview robber pulse overlay */}
       {isLegalRobber && (
         <mesh ref={pulseRef} position={[0, INNER_TOP_Y + 0.002, 0]}>
           <cylinderGeometry args={[INNER_RADIUS, INNER_RADIUS, 0.004, 6]} />
@@ -187,7 +183,6 @@ export default function HexTile3D({
         </mesh>
       )}
 
-      {/* Active roll glow — pulses only over the number token disc */}
       {isActive && hasToken && (
         <mesh ref={activeRef} position={[0, INNER_TOP_Y + TOKEN_H + 0.002, 0]}>
           <cylinderGeometry args={[TOKEN_RADIUS + 0.08, TOKEN_RADIUS + 0.08, 0.005, 32]} />
@@ -202,43 +197,34 @@ export default function HexTile3D({
         </mesh>
       )}
 
-      {/* 3D number token — scales with zoom, no pointer event blocking */}
       {hasToken && <NumberToken3D number={tile.number!} />}
 
-      {/* Robber — hooded figure with glowing eyes */}
       {hasRobber && (
         <group position={[0, robberBaseY, 0]}>
-          {/* Warning ring at base */}
           <mesh rotation={[Math.PI / 2, 0, 0]}>
             <torusGeometry args={[0.26, 0.028, 8, 32]} />
             <meshStandardMaterial color="#ff3333" emissive="#ff1111" emissiveIntensity={1.5} />
           </mesh>
-          {/* Cloaked body */}
           <mesh position={[0, 0.175, 0]} castShadow>
             <cylinderGeometry args={[0.10, 0.20, 0.35, 8]} />
             <meshStandardMaterial color="#4a4a4a" roughness={0.92} metalness={0.05} />
           </mesh>
-          {/* Shoulder flare */}
           <mesh position={[0, 0.36, 0]} castShadow>
             <cylinderGeometry args={[0.155, 0.105, 0.07, 8]} />
             <meshStandardMaterial color="#4a4a4a" roughness={0.92} metalness={0.05} />
           </mesh>
-          {/* Head */}
           <mesh position={[0, 0.445, 0]} castShadow>
             <sphereGeometry args={[0.095, 10, 8]} />
             <meshStandardMaterial color="#5a5a5a" roughness={0.85} metalness={0.08} />
           </mesh>
-          {/* Hood */}
           <mesh position={[0, 0.465, 0]} castShadow>
             <coneGeometry args={[0.165, 0.24, 8]} />
             <meshStandardMaterial color="#3a3a3a" roughness={0.96} metalness={0.0} />
           </mesh>
-          {/* Left eye */}
           <mesh position={[-0.040, 0.455, 0.082]}>
             <sphereGeometry args={[0.017, 6, 6]} />
             <meshStandardMaterial color="#ff2020" emissive="#ff0000" emissiveIntensity={2.5} />
           </mesh>
-          {/* Right eye */}
           <mesh position={[0.040, 0.455, 0.082]}>
             <sphereGeometry args={[0.017, 6, 6]} />
             <meshStandardMaterial color="#ff2020" emissive="#ff0000" emissiveIntensity={2.5} />

@@ -16,23 +16,17 @@ function springDrop(t: number): number {
 
 const ROAD_HEIGHT = 0.07;
 const ROAD_WIDTH = 0.11;
-// Total length trimmed across both ends so roads don't clip into vertex pieces or each other.
+// Trim road length so it doesn't clip into settlement/city geometry at either end.
 const ROAD_END_GAP = 0.42;
 
-// Sketchfab Z-up→Y-up root transform: model-Z→worldY, model-Y→world(-Z).
-// Road world-space bounds:
-//   worldX=[1.314,5.314] cx=3.314 sizeX=4  (→ parent Z = road width after rotation)
-//   worldY=[0,24]        cy=12              (→ parent X = edge length after rotation)
-//   worldZ=[-5.519,-1.519] cz=-3.519 sizeZ=4 (→ parent Y = road height after rotation)
-// Rotation [-PI/2, 0, -PI/2] (XYZ Euler) = R' maps (x,y,z)→(y,z,x):
-//   worldY (long 24) → parentX (edge direction)
-//   worldX           → parentZ (road width)
-//   worldZ           → parentY (road height)
+// Model centering constants derived from the GLB bounding box after applying
+// rotation [-PI/2, 0, -PI/2]. These offset the geometry so the road sits
+// flush with the board and is centred on the edge midpoint.
 const R_CX = 3.314;
 const R_CY = 12.0;
 const R_CZ = -3.519;
-const R_SX = ROAD_WIDTH / 4;    // 0.045 — worldX→parentZ
-const R_SZ = ROAD_HEIGHT / 4;   // 0.0175 — worldZ→parentY
+const R_SX = ROAD_WIDTH / 4;
+const R_SZ = ROAD_HEIGHT / 4;
 
 interface OwnedRoadModelProps {
   clonedRoad: THREE.Group;
@@ -135,9 +129,9 @@ export default function RoadEdge3D({
 
   // Centering position (in rotation-group space, accounting for scale):
   // pos = [-R_SX*cx, -scaleY*cy, -R_SZ*cz]
-  const cPosX = -R_SX * R_CX;    // -0.149 (constant)
-  const cPosY = -scaleY * R_CY;  // -effectiveLength/2 (varies per edge)
-  const cPosZ = -R_SZ * R_CZ;    //  0.062 (constant)
+  const cPosX = -R_SX * R_CX;
+  const cPosY = -scaleY * R_CY;
+  const cPosZ = -R_SZ * R_CZ;
 
   return (
     <group

@@ -1,8 +1,4 @@
-/**
- * BankPanel — shows the bank's remaining resource counts plus a "Trade with Bank"
- * button. Each resource tile carries the DOM id required by FlyLayer:
- *   id="bank-anchor-{resourceKey}"
- */
+// Each resource tile carries the DOM id "bank-anchor-{key}" consumed by FlyLayer.
 import { Icon } from '@/shared/components/Icon';
 import { ResourceIcon } from '@/shared/components/ResourceIcon';
 import { RESOURCE_CONFIG } from '@/features/resource-hand/ResourceStack';

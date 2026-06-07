@@ -1,8 +1,3 @@
-/**
- * DevStack — a vertical stack of dev cards for one card type.
- * Playable types (knight / year_of_plenty / monopoly / road_building) glow
- * purple and show a "tap to play" prompt; victory_point cards are gold.
- */
 import { useState } from 'react';
 import { ImgIcon } from '@/shared/components/ResourceIcon';
 import type { IconKey } from '@/shared/components/ResourceIcon';

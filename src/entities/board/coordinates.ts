@@ -3,8 +3,7 @@
 
 export const SQRT3 = Math.sqrt(3);
 
-// Node fractional cube coordinates from COORDINATES.md
-// Each entry: node_id -> [x, y, z] as fractions
+// Fractional cube coordinates for each of the 54 vertex nodes
 const NODE_CENTERS_RAW: [number, number, number][] = [
   [1/3, 1/3, -2/3],    // 0
   [2/3, -1/3, -1/3],   // 1
@@ -81,12 +80,11 @@ export function edgeKey(a: number, b: number): string {
 }
 
 // Check if two nodes are adjacent (share an edge)
-// Derived by checking if their cube positions differ by exactly one edge
 export function areNodesAdjacent(a: number, b: number): boolean {
   if (a < 0 || a >= NODE_COUNT || b < 0 || b >= NODE_COUNT) return false;
   const [ax, ay] = NODE_CENTERS_RAW[a];
   const [bx, by] = NODE_CENTERS_RAW[b];
-  // Adjacent nodes are exactly 2/3 apart in cube space (verified: 0↔1, 0↔5, 0↔20 all = 2/3)
+  // Adjacent nodes are exactly 2/3 apart in cube space
   const dx = bx - ax;
   const dy = by - ay;
   const dz = -dx - dy;
@@ -94,7 +92,6 @@ export function areNodesAdjacent(a: number, b: number): boolean {
   return Math.abs(dist - 2/3) < 0.01;
 }
 
-// Build adjacency map for all nodes (precomputed for performance)
 function buildAdjacencyMap(): Map<number, number[]> {
   const map = new Map<number, number[]>();
   for (let i = 0; i < NODE_COUNT; i++) {
@@ -132,8 +129,7 @@ export function getNodesAdjacentToTile(tileKey: string): number[] {
   const [tx, ty] = parseCubeKey(tileKey);
   const nodeIds: number[] = [];
 
-  // Corner offsets from COORDINATES.md
-  const offsets: [number, number, number][] = [
+    const offsets: [number, number, number][] = [
     [1/3, 1/3, -2/3],    // NORTH
     [2/3, -1/3, -1/3],   // NORTHEAST
     [1/3, -2/3, 1/3],    // SOUTHEAST
@@ -176,13 +172,11 @@ function buildTileNodeMap(): Map<string, number[]> {
 
 export const TILE_NODE_MAP = buildTileNodeMap();
 
-// Export raw node centers for any consumers that need them
 export const NODE_CENTERS = NODE_CENTERS_RAW;
 
 // ── 3D world coordinates ──────────────────────────────────────────────────────
-// Board lies in the XZ plane (Three.js Y-up convention). Y=0 is the tile surface.
-
-export const HEX_RADIUS_3D = 1.2; // grid spacing radius; tiles use 0.96× for a small gap
+// Board lies in the XZ plane (Three.js Y-up). HexTile3D uses 0.96× of this for a small gap.
+export const HEX_RADIUS_3D = 1.2;
 
 export function tileToWorld3D(cubeX: number, cubeY: number): [number, number, number] {
   const wx = HEX_RADIUS_3D * (SQRT3 * cubeX + (SQRT3 / 2) * cubeY);

@@ -13,11 +13,3 @@ export async function getAgents(numPlayers?: number): Promise<AgentConfig[]> {
   return data.agents || [];
 }
 
-export async function testApiKey(): Promise<boolean> {
-  try {
-    await api.get('/agents');
-    return true;
-  } catch {
-    return false;
-  }
-}

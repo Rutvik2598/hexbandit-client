@@ -39,9 +39,7 @@ interface GameStore {
   lastPwin: PwinByColor | null;
   lastPwinStep: number;
   isEvaluating: boolean;
-  // Raw (un-smoothed) pwin for the current position — used for delta calculations
   lastRawPwin: PwinByColor | null;
-  // Top candidate moves from the most recent eval
   lastActionsPwin: ActionPwin[] | null;
 
   // Log
@@ -64,7 +62,6 @@ interface GameStore {
   // Last rolled dice [d1, d2] — extracted from action log ROLL event
   lastRollDice: [number, number] | null;
 
-  // Tracks how many action log events have been synced from server
   actionLogTotal: number;
 
   // Actions
@@ -72,12 +69,9 @@ interface GameStore {
   setHumanPlayers: (indices: number[]) => void;
   setPerspectiveColor: (color: PlayerColor | null) => void;
   setGameState: (state: GameState | null) => void;
-  setLoading: (v: boolean) => void;
-  setError: (msg: string | null) => void;
   setThinking: (t: Partial<ThinkingState>) => void;
   clearThinking: () => void;
   updatePwin: (result: PwinResult) => void;
-  clearPwin: () => void;
   clearActionsPwin: () => void;
   setEvaluating: (v: boolean) => void;
   addLog: (message: string, level?: LogEntry['level'], html?: boolean) => void;
@@ -131,9 +125,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setHumanPlayers: (indices) => set({ humanPlayerIndices: indices }),
   setPerspectiveColor: (color) => set({ perspectiveColor: color }),
   setGameState: (state) => set({ gameState: state }),
-  setLoading: (v) => set({ isLoading: v }),
-  setError: (msg) => set({ error: msg }),
-
   setThinking: (t) =>
     set(s => ({ thinking: { ...s.thinking, ...t } })),
 
@@ -144,8 +135,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { lastPwin } = get();
     const newPwin = result.pwin_by_color;
 
-    // EMA smoothing
-    const numColors = Object.keys(newPwin).length || 1;
+      const numColors = Object.keys(newPwin).length || 1;
     let prior = lastPwin;
     if (!prior) {
       prior = {};
@@ -176,7 +166,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
-  clearPwin: () => set({ lastPwin: null, lastPwinStep: -1, lastRawPwin: null, lastActionsPwin: null }),
   clearActionsPwin: () => set({ lastActionsPwin: null, lastRawPwin: null }),
 
   setEvaluating: (v) => set({ isEvaluating: v }),
@@ -192,8 +181,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         html,
         timestamp: Date.now(),
       };
-      // Keep last 200 entries
-      const entries = [...s.logEntries, entry].slice(-200);
+          const entries = [...s.logEntries, entry].slice(-200);
       return { logEntries: entries, _logId: id };
     }),
 

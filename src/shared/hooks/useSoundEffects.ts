@@ -14,8 +14,7 @@ export function useSoundEffects() {
   const prevDiceRef    = useRef<typeof lastRollDice>(null);
   const prevGainsRef   = useRef<typeof resourceGains>(null);
 
-  // Capture baseline after first state load so historical data doesn't trigger sounds.
-  // Must be defined first — React runs effects in definition order.
+  // Capture baseline on first load so replayed historical data doesn't trigger sounds.
   useEffect(() => {
     if (gameState && !initializedRef.current) {
       initializedRef.current = true;
@@ -34,7 +33,6 @@ export function useSoundEffects() {
     prevDiceRef.current = lastRollDice;
   }, [lastRollDice, replayMode]);
 
-  // Resource collect — plays for human player gains; in bot-only games plays for any gain
   useEffect(() => {
     if (!initializedRef.current || replayMode) return;
     if (!resourceGains || resourceGains === prevGainsRef.current) return;
@@ -56,7 +54,6 @@ export function useSoundEffects() {
     if (hasGains) playSound(SFX.resourceCollect, 0.65);
   }, [resourceGains, replayMode]);
 
-  // Build / robber sounds from action log
   useEffect(() => {
     if (!initializedRef.current || replayMode) return;
     const newEntries = logEntries.filter(

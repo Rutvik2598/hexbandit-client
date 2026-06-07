@@ -1,12 +1,5 @@
-/**
- * DiceTray — two physical dice with pip grid layout and a tumble animation
- * while the roll is in flight, settling on the server-returned values.
- *
- * Animation strategy: the Die key includes both rollKey and the rolling boolean.
- * Any rolling-state change (human or bot roll) unmounts+remounts the Die with a
- * brand-new DOM element, so animationName is declared in the React style from the
- * very first paint — no imperative reflow tricks needed.
- */
+// Die key includes rollKey + rolling boolean so any rolling-state change (human or bot)
+// unmounts+remounts the Die, ensuring animationName is declared from the very first paint.
 import { useState, useEffect, useRef } from 'react';
 
 const PIPS: Record<number, number[]> = {

@@ -46,7 +46,7 @@ function buildBreakdown(p: Player): VpChip[] {
   if (p.cities > 0) chips.push({ label: p.cities === 1 ? 'City' : 'Cities', vp: p.cities * 2, icon: 'city', count: p.cities });
   if (p.settlements > 0) chips.push({ label: p.settlements === 1 ? 'Settlement' : 'Settlements', vp: p.settlements, icon: 'settlement', count: p.settlements });
 
-  // Opponent dev_cards_private is hidden from the client — infer any gap as VP cards
+  // Opponent dev_cards_private is hidden; bridge any VP gap with inferred VP cards
   const accounted = chips.reduce((sum, c) => sum + c.vp, 0);
   const gap = p.victory_points - accounted;
   if (gap > 0) chips.push({ label: gap === 1 ? 'VP Card' : 'VP Cards', vp: gap, icon: 'devcard', count: gap });
@@ -168,7 +168,6 @@ function StandingRow({ ranked, humanLost, isMobile }: {
             backgroundSize: '260% 100%', animation: 'winnerSheen 4.5s ease-in-out infinite',
           }} />
         )}
-        {/* top row: rank + name + vp */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 28, height: 28, flexShrink: 0, borderRadius: 8, display: 'grid', placeItems: 'center',
@@ -196,7 +195,6 @@ function StandingRow({ ranked, humanLost, isMobile }: {
             <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: isWinner ? 'var(--amber-soft)' : 'var(--text-faint)' }}>VP</span>
           </div>
         </div>
-        {/* chips row */}
         {breakdown.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingLeft: 38 }}>
             {breakdown.map((chip, i) => <VpChip key={i} chip={chip} compact />)}
@@ -206,7 +204,6 @@ function StandingRow({ ranked, humanLost, isMobile }: {
     );
   }
 
-  // Desktop / tablet layout (unchanged)
   return (
     <div style={{
       position: 'relative', display: 'flex', alignItems: 'center', gap: 16,
@@ -259,8 +256,6 @@ function StandingRow({ ranked, humanLost, isMobile }: {
   );
 }
 
-// ── Stats table ───────────────────────────────────────────────────────────────
-
 function StatCell({ value, highlight }: { value: string | number; highlight?: boolean }) {
   return (
     <td style={{
@@ -303,7 +298,6 @@ function StatsTable({ gameState }: { gameState: GameState }) {
     { label: 'Final Hand (dev)',   key: 'finalDevCards' },
   ];
 
-  // Only show action-log-derived rows when log data is present
   if (stats.some(s => s.resourcesCollected > 0)) {
     rows.splice(rows.findIndex(r => r.key === 'finalResources'), 0,
       { label: 'Resources Collected', key: 'resourcesCollected', higherIsBetter: true }
@@ -454,7 +448,6 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
           padding: isMobile ? '24px 14px 28px' : isTablet ? '28px 16px 32px' : '28px 0 28px',
         }}
       >
-        {/* winner crest */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: isMobile ? 14 : 18 }}>
           <span className="eyebrow" style={{
             color: humanLost ? '#8b9bb5' : 'var(--amber-soft)',
@@ -514,7 +507,6 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
           </p>
         </div>
 
-        {/* standings */}
         <div className="panel" style={{ padding: isMobile ? 10 : 16, display: 'flex', flexDirection: 'column', gap: isMobile ? 7 : 10 }}>
           <div className="eyebrow" style={{ padding: isMobile ? '2px 4px 2px' : '4px 6px 2px' }}>Final Standings</div>
           {ranked.map(r => (
@@ -522,7 +514,6 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
           ))}
         </div>
 
-        {/* stats toggle */}
         <button
           onClick={() => setShowStats(v => !v)}
           className="btn"
@@ -550,7 +541,6 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
           }}>▾</span>
         </button>
 
-        {/* stats panel */}
         <AnimatePresence>
           {showStats && (
             <motion.div
@@ -568,7 +558,6 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
           )}
         </AnimatePresence>
 
-        {/* action buttons */}
         <div style={{
           display: 'flex', gap: isMobile ? 8 : 12,
           marginTop: isMobile ? 12 : 14,

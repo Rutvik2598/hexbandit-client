@@ -23,10 +23,7 @@ const S_ROTATION: [number, number, number] = [Math.PI / 2, 0, 0];
 const C_SCALE = 0.40 / 20;
 const C_ROTATION: [number, number, number] = [Math.PI / 2, 0, 0];
 
-/**
- * Computes a centering offset for a scene after applying rotation + uniform scale,
- * so that the model sits with its base at Y=0 and is centred on XZ.
- */
+// Returns [dx, dy, dz] that centres the transformed model with its base at Y=0.
 function computeAnchor(
   scene: THREE.Group,
   rotation: [number, number, number],
@@ -114,7 +111,6 @@ function LegalIndicator({ isHovered, isPreview }: { isHovered?: boolean; isPrevi
   useFrame(({ clock }) => {
     if (!ringRef.current) return;
     const mat = ringRef.current.material as THREE.MeshBasicMaterial;
-    // Pulse gently; brighter on hover
     const base = isHovered ? 0.78 : 0.40;
     const amp  = isHovered ? 0.14 : 0.10;
     mat.opacity = base + Math.sin(clock.getElapsedTime() * 3) * amp;
@@ -122,13 +118,11 @@ function LegalIndicator({ isHovered, isPreview }: { isHovered?: boolean; isPrevi
 
   return (
     <group>
-      {/* Invisible hit area */}
       <mesh position={[0, 0.007, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={10}>
         <circleGeometry args={[0.28, 32]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} depthTest={false} />
       </mesh>
 
-      {/* Ring always visible when legal — not just on hover */}
       <mesh ref={ringRef} position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={11}>
         <ringGeometry args={[0.13, 0.28, 48]} />
         <meshBasicMaterial

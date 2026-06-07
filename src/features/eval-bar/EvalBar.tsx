@@ -1,7 +1,3 @@
-/**
- * EvalBar / WinProbBar — segmented probability bar, one segment per player.
- * Styled to match the design's WinProbBar component.
- */
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { PLAYER_COLORS } from '@/shared/constants';

@@ -1,8 +1,3 @@
-/**
- * TradeModal — maritime trade (bank/port trade) modal window.
- * Shows "You Give" and "You Receive" sections; uses port rates from the
- * playable actions to show each resource's effective trading rate.
- */
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ResourceIcon } from '@/shared/components/ResourceIcon';

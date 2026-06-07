@@ -111,7 +111,6 @@ export default function GamePage() {
   const prevPlayersRef     = useRef<Player[] | null>(null);
   const prevHumanTurnRef   = useRef<boolean | null>(null);
 
-  // ── Derived game state ─────────────────────────────────────────────────────
   const playableActions = gameState?.playable_actions ?? [];
   const hasRoll         = playableActions.some(a => a.action_type === 'ROLL');
   const hasEndTurn      = playableActions.some(a => a.action_type === 'END_TURN');
@@ -133,12 +132,10 @@ export default function GamePage() {
     { key: 'devcard',    icon: 'devcard'    as const, modeKey: null as null,                 available: hasBuyDev,          directAction: 'BUY_DEVELOPMENT_CARD' as const },
   ];
 
-  // ── Redirect if no game ────────────────────────────────────────────────────
   useEffect(() => {
     if (!gameId) navigate('/');
   }, [gameId, navigate]);
 
-  // ── Init game on mount ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!gameId || initialized.current) return;
     initialized.current = true;
@@ -168,7 +165,6 @@ export default function GamePage() {
     });
   }, [gameId]); // eslint-disable-line
 
-  // ── Fly animations on resource gains ──────────────────────────────────────
   useEffect(() => {
     if (!resourceGains || resourceGains === prevGains.current) return;
     prevGains.current = resourceGains;
@@ -187,10 +183,8 @@ export default function GamePage() {
     });
   }, [resourceGains, humanPlayerIndices]);
 
-  // ── Auto-open / auto-close action drawer for trade responses and discard ──
-  // Opens when a special action arrives (trade offer, discard prompt).
-  // Closes when the action resolves — no button tap needed.
-  // Does NOT reopen if the user manually dismissed the drawer.
+  // Opens the action drawer on mobile when a trade offer or discard arrives;
+  // closes it automatically when the prompt resolves.
   useEffect(() => {
     if (bp !== 'mobile') return;
     const was = prevNeedsSpecial.current;
@@ -203,7 +197,6 @@ export default function GamePage() {
     }
   }, [bp, needsSpecialAction]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Close mobile drawer when game ends or replay mode changes ─────────────
   useEffect(() => {
     if (bp === 'mobile') setMobileDrawer(null);
   }, [replayMode, bp]);
@@ -212,7 +205,6 @@ export default function GamePage() {
     if (gameState?.winner && !replayMode && bp === 'mobile') setMobileDrawer(null);
   }, [gameState?.winner, replayMode, bp]);
 
-  // ── Warn on accidental tab close ──────────────────────────────────────────
   useEffect(() => {
     if (!gameId) return;
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
@@ -220,7 +212,6 @@ export default function GamePage() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [gameId]);
 
-  // ── Largest Army / Longest Road detection ─────────────────────────────────
   useEffect(() => {
     if (!gameState || replayMode) return;
     const players = gameState.players;
@@ -250,7 +241,6 @@ export default function GamePage() {
     return () => clearTimeout(t);
   }, [achievement]);
 
-  // ── Your Turn detection ───────────────────────────────────────────────────
   useEffect(() => {
     if (!gameState || replayMode || humanPlayerIndices.length === 0 || gameState.winner) return;
     const isNowHuman = humanPlayerIndices.includes(gameState.current_player_index);
@@ -267,7 +257,6 @@ export default function GamePage() {
     return () => clearTimeout(t);
   }, [showYourTurn]);
 
-  // ── Replay helpers ────────────────────────────────────────────────────────
   const handleEnterReplay = useCallback(async () => {
     setReplayLoading(true);
     try {
@@ -278,7 +267,6 @@ export default function GamePage() {
     }
   }, [enterReplay, setSidebarTab]);
 
-  // ── Common derived values ─────────────────────────────────────────────────
   const isHumanTurn = isCurrentPlayerHuman();
   const isDisabled  = !isHumanTurn || replayMode ||
     thinking.phase === 'thinking' || thinking.phase === 'submitting';
@@ -291,14 +279,8 @@ export default function GamePage() {
     ? gameState?.players[humanPlayerIndices[0]]
     : null;
 
-  // ── Auto-activate BUILD_ROAD during initial placement and Road Building card ──
-  // ActionPanel has the same logic but isn't mounted on mobile when the drawer
-  // is closed. Centralising it here ensures consistent behaviour everywhere.
-  //
-  // Two cases:
-  //   1. Initial placement — road is the ONLY available action (no roll / end-turn / etc.)
-  //   2. Road Building dev card — game_phase is 'ROAD_BUILDING'; END_TURN may still be in
-  //      playable_actions (forfeit road), so we can't rely on !hasEndTurn here.
+  // Auto-activate BUILD_ROAD here (not just in ActionPanel) so mobile users get the
+  // highlight even when the action drawer is closed.
   const isRoadForced        = hasBuildRoad && !hasRoll && !hasBuildSettlement && !hasBuildCity && !hasEndTurn && !hasDiscard;
   const isRoadBuildingPhase = gameState?.game_phase === 'ROAD_BUILDING' && hasBuildRoad && isHumanTurn;
   useEffect(() => {
@@ -334,7 +316,6 @@ export default function GamePage() {
     return rates;
   }, [playableActions]);
 
-  // ── Action handlers ───────────────────────────────────────────────────────
   const handlePlayDev = useCallback((type: DevCardType) => {
     if (type === 'year_of_plenty') { setShowYopPicker(true); return; }
     if (type === 'monopoly')       { setShowMonoPicker(true); return; }
@@ -365,7 +346,6 @@ export default function GamePage() {
     await submitAction(action);
   }, [submitAction, setShowOfferTradeModal]);
 
-  // Wire keyboard shortcuts — must come after handleAction is defined.
   useKeyboardShortcuts({ onAction: handleAction });
 
   const handleSuggestionLocationTap = useCallback(() => {
@@ -385,7 +365,6 @@ export default function GamePage() {
     );
   }, [gameId]);
 
-  // ── Compact dice roll (defined after handleAction to avoid TDZ) ───────────
   const handleCompactRoll = useCallback(() => {
     setRollPendingCompact(true);
     setRollKeyCompact(k => k + 1);
@@ -413,7 +392,6 @@ export default function GamePage() {
 
   if (!gameId) return null;
 
-  // ── Shared atmospheric overlays ───────────────────────────────────────────
   const atmosphericTint = (
     <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
       background: 'radial-gradient(ellipse 120% 80% at 50% 0%, rgba(16,36,64,0.45) 0%, transparent 60%)',
@@ -426,7 +404,6 @@ export default function GamePage() {
     }} />
   );
 
-  // ── Shared board ──────────────────────────────────────────────────────────
   const boardEl = (camOffset: number) => (
     <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
       {!gameState ? (
@@ -442,7 +419,6 @@ export default function GamePage() {
     </div>
   );
 
-  // ── Shared modals (all breakpoints) ───────────────────────────────────────
   const sharedModals = (
     <>
       <SettingsPanel />
@@ -451,6 +427,7 @@ export default function GamePage() {
         yourTurn={showYourTurn && humanPlayerIndices.length > 0 && gameState?.game_phase !== 'INITIAL_BUILD'}
         rightOffset={bp === 'mobile' ? 0 : layout.panelW + layout.gap}
         topOffset={bp === 'mobile' ? 100 : bp === 'tablet' ? 100 : 74}
+        compact={bp === 'mobile'}
       />
       <AnimatePresence>
         {gameState?.winner && !replayMode && (
@@ -750,17 +727,14 @@ export default function GamePage() {
         {/* ── Full-screen board (no sidebar offset) ── */}
         {boardEl(0)}
 
-        {/* Hidden bank-anchor points for fly animation – sit at board centre so
-            resource tokens arc downward from the board to the hand bar.
-            These take priority over BankPanel anchors (which only exist when
-            the Players drawer is open) because they appear earlier in the DOM. */}
+        {/* Bank anchors at board centre — fly tokens arc from here to the hand bar.
+            Appearing earlier in the DOM gives them priority over BankPanel anchors. */}
         <div style={{ position: 'absolute', left: '50%', top: '42%', zIndex: 0, pointerEvents: 'none' }}>
           {RESOURCE_ORDER.map(res => (
             <span key={res} id={`bank-anchor-${res}`} style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }} />
           ))}
         </div>
 
-        {/* ── Left column: build strip above, DiceTray + Roll/End Turn below ── */}
         {gameState && !replayMode && (
           <div style={{
             position: 'absolute', left: 8,
@@ -768,8 +742,7 @@ export default function GamePage() {
             zIndex: 15, display: 'flex', flexDirection: 'column-reverse', gap: 8,
             pointerEvents: 'none',
           }}>
-            {/* Dice panel */}
-            <div className="panel" style={{ padding: '10px 12px', pointerEvents: 'auto', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+                <div className="panel" style={{ padding: '10px 12px', pointerEvents: 'auto', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
               <DiceTray dice={lastRollDice} rolling={isRollingCompact} rollKey={rollKeyCompact} compact />
               {isHumanTurn && hasRoll && (
                 <button onClick={handleCompactRoll} disabled={isDisabled || isRollingCompact}
@@ -785,7 +758,6 @@ export default function GamePage() {
               )}
             </div>
 
-            {/* Build strip — stacks above dice via column-reverse */}
             {humanPlayer && !needsSpecialAction && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, pointerEvents: 'auto' }}>
                 {compactBuildItems.map(item => {
@@ -823,7 +795,6 @@ export default function GamePage() {
           </div>
         )}
 
-        {/* ── Recent game log — right side, floats above resource bar ── */}
         {gameState && !replayMode && (() => {
           const recent = logEntries.filter(e => e.level === 'action').slice(-4);
           if (recent.length === 0) return null;
@@ -869,7 +840,6 @@ export default function GamePage() {
           );
         })()}
 
-        {/* ── Resource counts — right side, aligns with bottom of dice panel ── */}
         {humanPlayer && !replayMode && gameState && (
           <div style={{
             position: 'absolute', right: 8,
@@ -901,7 +871,6 @@ export default function GamePage() {
           </div>
         )}
 
-        {/* ── Replay controls + analysis on mobile ── */}
         {replayMode && gameState && (
           <div style={{
             position: 'absolute', bottom: `calc(env(safe-area-inset-bottom, 0px) + 8px)`,
@@ -917,7 +886,6 @@ export default function GamePage() {
           </div>
         )}
 
-        {/* ── Mobile drawer ── */}
         <AnimatePresence>
           {mobileDrawer && gameState && (
             <motion.div
@@ -940,11 +908,10 @@ export default function GamePage() {
                 display: 'flex', flexDirection: 'column',
               }}
             >
-              {/* Drag handle — only this area initiates the drag gesture */}
               <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', padding: '10px 0 4px', cursor: 'grab' }}>
                 <div style={{ width: 36, height: 4, borderRadius: 4, background: 'var(--glass-brd2)' }} />
               </div>
-              {/* Stop pointer capture on content so native scroll works and drag doesn't fire here */}
+              {/* Stop pointer capture so native scroll works inside the drawer */}
               <div
                 className="scrollbar-none"
                 style={{ flex: 1, overflowY: 'auto', padding: '0 14px 20px' }}
@@ -993,13 +960,11 @@ export default function GamePage() {
                   </div>
                 )}
 
-                {/* Trade picker */}
                 {mobileDrawer === 'trade' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div className="eyebrow">Trade</div>
                     <div style={{ display: 'flex', gap: 10 }}>
 
-                      {/* Bank Trade */}
                       <button
                         onClick={() => { setShowTradeModal(true); setMobileDrawer(null); }}
                         disabled={!canTrade}
@@ -1041,7 +1006,6 @@ export default function GamePage() {
                         )}
                       </button>
 
-                      {/* Player Trade */}
                       <button
                         onClick={() => { setShowOfferTradeModal(true); setMobileDrawer(null); }}
                         disabled={!isOfferTradeAllowed}
@@ -1074,14 +1038,12 @@ export default function GamePage() {
           )}
         </AnimatePresence>
 
-        {/* ── Bottom navigation bar ── */}
         {gameState && !replayMode && (
           <div className="panel mobile-bottom-bar" style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 25,
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px',
             borderRadius: '16px 16px 0 0', background: 'var(--glass-2)',
           }}>
-              {/* Game Menu */}
               <button
                 onClick={() => setMobileDrawer(d => d === 'action' ? null : 'action')}
                 className={`btn${needsSpecialAction && isHumanTurn && mobileDrawer !== 'action' ? ' btn-amber' : ''}`}
@@ -1101,7 +1063,6 @@ export default function GamePage() {
 
               <div style={{ width: 1, height: 28, background: 'var(--hairline)', flexShrink: 0 }} />
 
-              {/* Trade */}
               <button
                 onClick={() => setMobileDrawer(d => d === 'trade' ? null : 'trade')}
                 className="btn"
@@ -1125,7 +1086,6 @@ export default function GamePage() {
 
               <div style={{ width: 1, height: 28, background: 'var(--hairline)', flexShrink: 0 }} />
 
-              {/* Players */}
               <button
                 onClick={() => setMobileDrawer(d => d === 'players' ? null : 'players')}
                 className="btn"
@@ -1167,7 +1127,6 @@ export default function GamePage() {
       {atmosphericTint}
       {vignette}
 
-      {/* ── Top bar ── */}
       <div className="panel" style={{
         position: 'absolute', top: gap, left: gap, right: camOffset, zIndex: 10,
         display: 'flex', flexDirection: bp === 'tablet' ? 'column' : 'row',
@@ -1285,10 +1244,8 @@ export default function GamePage() {
         )}
       </div>
 
-      {/* ── Board ── */}
       {boardEl(camOffset)}
 
-      {/* ── Bottom-left command zone ── */}
       {gameState && (
         <div style={{
           position: 'absolute', left: gap, bottom: bottomOffset, zIndex: 12,
@@ -1297,16 +1254,13 @@ export default function GamePage() {
         }}>
           {!replayMode ? (
             bp === 'desktop' ? (
-              /* Desktop: full ActionPanel — trade phases float as a centred modal */
               <ActionPanel onAction={handleAction} disabled={isDisabled} floatTrade />
             ) : (
-              /* Tablet: compact dice + build strip, full ActionPanel only for special phases */
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7, pointerEvents: 'auto' }}>
                 {needsSpecialAction ? (
                   <ActionPanel onAction={handleAction} disabled={isDisabled} />
                 ) : (
                   <>
-                    {/* Build strip */}
                     {humanPlayer && (
                       <div className="panel" style={{ padding: '8px 7px', display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
                         {compactBuildItems.map(item => {
@@ -1342,7 +1296,6 @@ export default function GamePage() {
                       </div>
                     )}
 
-                    {/* Dice + Roll/End Turn */}
                     <div className="panel" style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
                       <DiceTray dice={lastRollDice} rolling={isRollingCompact} rollKey={rollKeyCompact} compact />
                       {isHumanTurn && hasRoll && (
@@ -1382,14 +1335,12 @@ export default function GamePage() {
         </div>
       )}
 
-      {/* ── Right sidebar ── */}
       <div className="panel" style={{
         position: 'absolute', top: gap, right: gap, bottom: gap, width: panelW, zIndex: 10,
         display: 'flex', flexDirection: 'column',
         padding: bp === 'tablet' ? 12 : 16,
         gap: 14, overflow: 'hidden',
       }}>
-        {/* Tab bar */}
         <div style={{
           flexShrink: 0, display: 'flex', borderRadius: 10, overflow: 'hidden',
           background: 'var(--bg-1)', border: '1px solid var(--hairline)',
@@ -1426,7 +1377,6 @@ export default function GamePage() {
           })}
         </div>
 
-        {/* Tab content */}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {sidebarTab === 'players' && (
             <>
@@ -1455,7 +1405,6 @@ export default function GamePage() {
           )}
         </div>
 
-        {/* Perspective indicator */}
         {perspectiveColor && (
           <div style={{
             flexShrink: 0, display: 'flex', alignItems: 'center', gap: 7,

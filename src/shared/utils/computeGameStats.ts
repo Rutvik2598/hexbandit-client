@@ -48,7 +48,6 @@ export function computePlayerStats(players: Player[]): PlayerGameStats[] {
       devTotalPlayed: played.knight + played.year_of_plenty + played.monopoly + played.road_building,
       finalResources: finalRes,
       finalDevCards: p.num_dev_cards,
-      // zeroed — populated by enrichWithActionLog if log is available
       resourcesCollected: 0,
       tradesCompleted: 0,
       timesRobbed: 0,
@@ -57,10 +56,6 @@ export function computePlayerStats(players: Player[]): PlayerGameStats[] {
   });
 }
 
-/**
- * Enrich stats with counters derived from the action log.
- * Safe to call with an empty log — it simply leaves enriched fields at 0.
- */
 export function enrichWithActionLog(
   stats: PlayerGameStats[],
   actionLog: ActionLogEvent[],
@@ -73,7 +68,6 @@ export function enrichWithActionLog(
 
     switch (event.action_type) {
       case 'ROLL': {
-        // result: { COLOR: [wood, brick, sheep, wheat, ore] }
         const result = event.result;
         if (result && typeof result === 'object' && !Array.isArray(result)) {
           for (const [color, freqdeck] of Object.entries(result as Record<string, unknown>)) {
@@ -91,7 +85,6 @@ export function enrichWithActionLog(
       case 'MOVE_ROBBER': {
         if (event.card_stolen) {
           s.timesRobbing++;
-          // victim is val[1]
           const val = event.value;
           if (Array.isArray(val) && val[1]) {
             const victim = byColor.get(String(val[1]));

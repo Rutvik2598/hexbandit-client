@@ -2,7 +2,6 @@ import { PLAYER_COLORS, RESOURCE_EMOJI, RESOURCE_ORDER } from '@/shared/constant
 import type { ActionLogEvent, Player } from '@/shared/types/game';
 
 const RESOURCE_IDX_EMOJI = ['🪵', '🧱', '🐑', '🌾', '⛏️'];
-const RESOURCE_IDX_NAMES = ['Wood', 'Brick', 'Sheep', 'Wheat', 'Ore'];
 const DEV_CARD_ICONS = ['⚔️ Knight', '🎁 Year of Plenty', '💰 Monopoly', '🛤️ Road Building', '🏆 Victory Point'];
 
 function escHtml(str: string): string {
@@ -98,8 +97,7 @@ export function formatActionLogEvent(event: ActionLogEvent, players: Player[]): 
     }
     case 'DISCARD': {
       if (Array.isArray(val)) {
-        // val is an array of resource indices
-        const parts = (val as number[]).map(r => RESOURCE_IDX_EMOJI[r] ?? '?').join(' ');
+          const parts = (val as number[]).map(r => RESOURCE_IDX_EMOJI[r] ?? '?').join(' ');
         return `${label}: 🗑️ DISCARD ${parts}`;
       }
       return `${label}: 🗑️ DISCARD`;
@@ -173,5 +171,3 @@ export function extractRollGains(event: ActionLogEvent): Record<string, Partial<
   return Object.keys(gains).length > 0 ? gains : null;
 }
 
-// Re-export for reference outside this module
-export { RESOURCE_IDX_NAMES };
