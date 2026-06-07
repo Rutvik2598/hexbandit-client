@@ -1,7 +1,7 @@
 # Hexbandit Client
 
 [![Tests](https://github.com/Rutvik2598/hexbandit-client/actions/workflows/test.yml/badge.svg)](https://github.com/Rutvik2598/hexbandit-client/actions/workflows/test.yml)
-[![Coverage](https://codecov.io/gh/Rutvik2598/hexbandit-client/graph/badge.svg)](https://codecov.io/gh/Rutvik2598/hexbandit-client)
+[![codecov](https://codecov.io/gh/Rutvik2598/hexbandit-client/graph/badge.svg?token=EOB4GCA8FE)](https://codecov.io/gh/Rutvik2598/hexbandit-client)
 
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
