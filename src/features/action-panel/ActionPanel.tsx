@@ -429,7 +429,7 @@ export interface ActionPanelProps {
   floatTrade?: boolean;
 }
 
-export default function ActionPanel({ onAction, disabled, width = 196, floatTrade = false }: ActionPanelProps) {
+export default function ActionPanel({ onAction, disabled, width = 175, floatTrade = false }: ActionPanelProps) {
   const gameState     = useGameStore(s => s.gameState);
   const thinking      = useGameStore(s => s.thinking);
   const lastRollDice  = useGameStore(s => s.lastRollDice);

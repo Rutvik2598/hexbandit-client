@@ -20,35 +20,6 @@ export function BankPanel({ bank, canTrade, onTrade, canOfferTrade, onOfferTrade
         Bank
       </div>
 
-      {/* resource tiles */}
-      <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between' }}>
-        {RESOURCE_CONFIG.map(r => {
-          const count = bank[r.key] ?? 0;
-          return (
-            <div key={r.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <div
-                id={`bank-anchor-${r.key}`}
-                style={{
-                  width: 36, height: 36, borderRadius: 9,
-                  display: 'grid', placeItems: 'center',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: `1px solid var(--hairline)`,
-                  borderTop: `2.5px solid ${r.color}`,
-                  transition: 'border-color 0.2s',
-                }}
-              >
-                <ResourceIcon type={r.key} size={22} shadow={false} />
-              </div>
-              <span style={{
-                fontSize: 12.5, fontWeight: 800,
-                color: count === 0 ? 'var(--text-ghost)' : 'var(--text)',
-                lineHeight: 1,
-              }}>{count}</span>
-            </div>
-          );
-        })}
-      </div>
-
       {/* trade buttons */}
       <div style={{ display: 'flex', gap: 6 }}>
         <button
@@ -83,6 +54,35 @@ export function BankPanel({ bank, canTrade, onTrade, canOfferTrade, onOfferTrade
             Players
           </button>
         )}
+      </div>
+
+      {/* resource tiles */}
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between' }}>
+        {RESOURCE_CONFIG.map(r => {
+          const count = bank[r.key] ?? 0;
+          return (
+            <div key={r.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div
+                id={`bank-anchor-${r.key}`}
+                style={{
+                  width: 36, height: 36, borderRadius: 9,
+                  display: 'grid', placeItems: 'center',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: `1px solid var(--hairline)`,
+                  borderTop: `2.5px solid ${r.color}`,
+                  transition: 'border-color 0.2s',
+                }}
+              >
+                <ResourceIcon type={r.key} size={22} shadow={false} />
+              </div>
+              <span style={{
+                fontSize: 12.5, fontWeight: 800,
+                color: count === 0 ? 'var(--text-ghost)' : 'var(--text)',
+                lineHeight: 1,
+              }}>{count}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
