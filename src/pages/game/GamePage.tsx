@@ -15,6 +15,9 @@ import ActionPanel from '@/features/action-panel/ActionPanel';
 import GameLog from '@/features/game-log/GameLog';
 import AnalysisPanel from '@/features/analysis-panel/AnalysisPanel';
 import ReplayControls from '@/features/replay-controls/ReplayControls';
+import MoveHistoryTimeline from '@/features/replay-controls/MoveHistoryTimeline';
+import PwinChart from '@/features/analysis-panel/PwinChart';
+import { useReplayJump } from '@/shared/hooks/useReplayJump';
 import { ResourceHand } from '@/features/resource-hand/ResourceHand';
 import { BankPanel } from '@/features/bank/BankPanel';
 import { TradeModal } from '@/features/trade/TradeModal';
@@ -85,6 +88,8 @@ export default function GamePage() {
     submitAction, autoAdvanceAI, startAutoPlay, stopAutoPlay,
     isCurrentPlayerHuman, enterReplay, exitReplay, cleanup,
   } = useGameLoop();
+
+  const replayJump = useReplayJump();
 
   const [replayLoading, setReplayLoading] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -1442,9 +1447,12 @@ export default function GamePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <AnalysisPanel />
               {replayMode && (
-                <div style={{ fontSize: 11.5, color: 'var(--text-ghost)', textAlign: 'center' }}>
-                  Scrub through moves to load analysis
-                </div>
+                <>
+                  <div style={{ height: 1, background: 'var(--hairline)', flexShrink: 0 }} />
+                  <PwinChart onJump={replayJump} />
+                  <div style={{ height: 1, background: 'var(--hairline)', flexShrink: 0 }} />
+                  <MoveHistoryTimeline onJump={replayJump} />
+                </>
               )}
             </div>
           )}
