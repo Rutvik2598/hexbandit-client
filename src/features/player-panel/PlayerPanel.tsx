@@ -14,7 +14,7 @@ export default function PlayerPanel() {
   const isAiThinking = thinking.phase === 'thinking' || thinking.phase === 'submitting';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 3px' }}>
       <div className="eyebrow" style={{ padding: '0 2px' }}>Players</div>
       {gameState.players.map(player => {
         const isCurrentTurn = player.index === gameState.current_player_index;

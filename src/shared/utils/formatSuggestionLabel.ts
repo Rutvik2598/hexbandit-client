@@ -7,6 +7,43 @@ function parseIntArray(str: string): number[] {
   return (str.match(/-?\d+/g) ?? []).map(Number);
 }
 
+function formatFreqdeck(deck: number[]): string {
+  return deck
+    .map((count, i) => count > 0 ? `${count > 1 ? `${count}×` : ''}${RESOURCE_IDX_EMOJI[i]}` : '')
+    .filter(Boolean)
+    .join(' ');
+}
+
+function formatOfferTrade(ap: ActionPwin): string {
+  let give: number[] | null = null;
+  let want: number[] | null = null;
+
+  // Structured value: [[give_freqdeck], [want_freqdeck]]
+  if (Array.isArray(ap.value) && ap.value.length === 2) {
+    const [g, w] = ap.value as unknown[];
+    if (Array.isArray(g) && Array.isArray(w) && g.length === 5 && w.length === 5) {
+      give = g as number[];
+      want = w as number[];
+    }
+  }
+
+  // Fall back to parsing the label string
+  if (!give || !want) {
+    const nums = parseIntArray(ap.action_label);
+    if (nums.length >= 10) {
+      give = nums.slice(0, 5);
+      want = nums.slice(5, 10);
+    }
+  }
+
+  if (!give || !want) return 'Offer Trade';
+
+  const giveStr = formatFreqdeck(give);
+  const wantStr = formatFreqdeck(want);
+  if (!giveStr && !wantStr) return 'Offer Trade';
+  return `Offer Trade · Give ${giveStr || '?'} · Want ${wantStr || '?'}`;
+}
+
 function formatMaritime(nums: number[]): string {
   if (nums.length < 2) return 'Maritime Trade';
   const asking = nums[nums.length - 1];
@@ -56,6 +93,9 @@ export function formatSuggestionLabel(ap: ActionPwin): string {
   const spaceIdx = raw.indexOf(' ');
   const actionType = spaceIdx === -1 ? raw : raw.slice(0, spaceIdx);
   const rest = spaceIdx === -1 ? '' : raw.slice(spaceIdx + 1);
+
+  // Offer trade — parse give/want freqdecks
+  if (actionType === 'OFFER_TRADE') return formatOfferTrade(ap);
 
   // Maritime trade needs special formatting
   if (actionType === 'MARITIME_TRADE') {

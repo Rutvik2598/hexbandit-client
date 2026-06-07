@@ -11,7 +11,7 @@ export default function GameLog() {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
   }, [logEntries.length]);
 
-  const visible = logEntries.filter(e => e.level === 'action' || e.level === 'error');
+  const visible = logEntries.filter(e => e.level === 'action');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>

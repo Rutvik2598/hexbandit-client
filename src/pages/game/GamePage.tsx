@@ -15,7 +15,6 @@ import ActionPanel from '@/features/action-panel/ActionPanel';
 import GameLog from '@/features/game-log/GameLog';
 import AnalysisPanel from '@/features/analysis-panel/AnalysisPanel';
 import ReplayControls from '@/features/replay-controls/ReplayControls';
-import MoveHistoryTimeline from '@/features/replay-controls/MoveHistoryTimeline';
 import PwinChart from '@/features/analysis-panel/PwinChart';
 import { useReplayJump } from '@/shared/hooks/useReplayJump';
 import { ResourceHand } from '@/features/resource-hand/ResourceHand';
@@ -1450,8 +1449,6 @@ export default function GamePage() {
                 <>
                   <div style={{ height: 1, background: 'var(--hairline)', flexShrink: 0 }} />
                   <PwinChart onJump={replayJump} />
-                  <div style={{ height: 1, background: 'var(--hairline)', flexShrink: 0 }} />
-                  <MoveHistoryTimeline onJump={replayJump} />
                 </>
               )}
             </div>

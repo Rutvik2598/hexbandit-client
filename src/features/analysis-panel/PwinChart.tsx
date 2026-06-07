@@ -92,7 +92,27 @@ export default function PwinChart({ onJump }: Props) {
     if (pt) onJump(pt.frameIndex);
   }, [mouseToVbX, nearestPoint, onJump]);
 
-  if (points.length < 2 || !gameState) return null;
+  if (!gameState) return null;
+
+  if (points.length < 2) {
+    return (
+      <div>
+        <div style={{
+          fontFamily: 'var(--ff-display)', fontSize: 10, fontWeight: 700,
+          letterSpacing: '0.18em', textTransform: 'uppercase',
+          color: 'var(--text-ghost)', paddingBottom: 6,
+        }}>
+          Win Probability
+        </div>
+        <div style={{
+          fontSize: 11.5, color: 'var(--text-ghost)', fontWeight: 600,
+          padding: '10px 0', textAlign: 'center',
+        }}>
+          No evaluation data in this recording
+        </div>
+      </div>
+    );
+  }
 
   const players = gameState.players;
 

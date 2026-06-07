@@ -4,7 +4,6 @@ import { useInteractionStore } from '@/store/interactionStore';
 import { getGameState, submitMove, deleteGame, getRecording } from '@/services/api/gamesApi';
 import { requestMove, requestEvaluate, pollUntilComplete } from '@/services/api/movesApi';
 import { formatActionLogEvent, extractRollDice, extractRollGains } from '@/shared/utils/actionLog';
-import { sanitizeGameState } from '@/shared/utils/sanitizeGameState';
 import { addToast } from '@/store/toastStore';
 import type { PlayableAction, GameState } from '@/shared/types/game';
 
@@ -99,12 +98,9 @@ export function useGameLoop() {
         perspectiveColor,
         actionLogStart: s.actionLogTotal,
       });
-      // Strip private opponent data before storing — prevents dev card
-      // details from appearing in the Zustand store or React DevTools.
-      const state = sanitizeGameState(rawState);
-      setGameState(state);
+      setGameState(rawState);
       resetInteraction();
-      processActionLog(state, s, addLog, setResourceGains, setLastRollDice, setActionLogTotal);
+      processActionLog(rawState, s, addLog, setResourceGains, setLastRollDice, setActionLogTotal);
       return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';

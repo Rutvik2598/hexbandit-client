@@ -16,7 +16,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { getGameState, getRecording } from '@/services/api/gamesApi';
-import { sanitizeGameState } from '@/shared/utils/sanitizeGameState';
 import { formatActionLogEvent } from '@/shared/utils/actionLog';
 import GameBoard3D from '@/features/game-board/GameBoard3D';
 import PlayerPanel from '@/features/player-panel/PlayerPanel';
@@ -65,22 +64,20 @@ export default function SpectatorPage() {
       try {
         const s = useGameStore.getState();
         const rawState = await getGameState(gameId!, { actionLogStart: s.actionLogTotal });
-        // Sanitize so no private data leaks (spectators see public info only)
-        const state = sanitizeGameState(rawState);
-        setGameState(state);
+        setGameState(rawState);
         setLoading(false);
         setError(null);
 
         // Feed new action log events into the game log panel
-        const actionLog = state.action_log ?? [];
-        const serverTotal = state.action_log_total ?? actionLog.length;
+        const actionLog = rawState.action_log ?? [];
+        const serverTotal = rawState.action_log_total ?? actionLog.length;
         const newCount = serverTotal - s.actionLogTotal;
         if (newCount > 0) {
           const startIdx = Math.max(0, actionLog.length - newCount);
           const fresh = useGameStore.getState();
           for (let i = startIdx; i < actionLog.length; i++) {
             const event = actionLog[i];
-            const html = formatActionLogEvent(event, state.players);
+            const html = formatActionLogEvent(event, rawState.players);
             if (html !== null) {
               fresh.addLog(`${event.color}|${html}`, 'action', true);
             }
@@ -88,7 +85,7 @@ export default function SpectatorPage() {
           fresh.setActionLogTotal(serverTotal);
         }
 
-        if (!state.winner && activeRef.current) {
+        if (!rawState.winner && activeRef.current) {
           pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
         }
       } catch (e) {

@@ -45,6 +45,12 @@ function buildBreakdown(p: Player): VpChip[] {
   if (vpCards > 0) chips.push({ label: 'VP Cards', vp: vpCards, icon: 'devcard', count: vpCards });
   if (p.cities > 0) chips.push({ label: p.cities === 1 ? 'City' : 'Cities', vp: p.cities * 2, icon: 'city', count: p.cities });
   if (p.settlements > 0) chips.push({ label: p.settlements === 1 ? 'Settlement' : 'Settlements', vp: p.settlements, icon: 'settlement', count: p.settlements });
+
+  // Opponent dev_cards_private is hidden from the client — infer any gap as VP cards
+  const accounted = chips.reduce((sum, c) => sum + c.vp, 0);
+  const gap = p.victory_points - accounted;
+  if (gap > 0) chips.push({ label: gap === 1 ? 'VP Card' : 'VP Cards', vp: gap, icon: 'devcard', count: gap });
+
   return chips;
 }
 
@@ -434,6 +440,7 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
 
       {/* card */}
       <motion.div
+        className="scrollbar-none"
         initial={{ opacity: 0, scale: 0.9, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
@@ -441,21 +448,22 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
           position: 'relative', zIndex: 3,
           width: isMobile ? '100%' : isTablet ? '90vw' : 780,
           maxWidth: isMobile ? '100%' : isTablet ? 680 : '94vw',
-          maxHeight: isMobile ? '100dvh' : undefined,
-          overflowY: isMobile ? 'auto' : undefined,
-          padding: isMobile ? '24px 14px 28px' : isTablet ? '32px 16px 36px' : '44px 0 40px',
+          maxHeight: isMobile ? '100dvh' : '90vh',
+          overflowY: 'auto',
+          scrollbarWidth: 'none',
+          padding: isMobile ? '24px 14px 28px' : isTablet ? '28px 16px 32px' : '28px 0 28px',
         }}
       >
         {/* winner crest */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: isMobile ? 18 : 28 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: isMobile ? 14 : 18 }}>
           <span className="eyebrow" style={{
             color: humanLost ? '#8b9bb5' : 'var(--amber-soft)',
-            letterSpacing: '0.34em', marginBottom: isMobile ? 10 : 16,
+            letterSpacing: '0.34em', marginBottom: isMobile ? 8 : 10,
           }}>
             {isFullBotGame ? 'Game Over' : humanLost ? 'Defeat' : 'Victory'}
           </span>
 
-          <Crown winnerColor={winnerColor} size={isMobile ? 64 : 92} />
+          <Crown winnerColor={winnerColor} size={isMobile ? 56 : 72} />
 
           {isMobile ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, maxWidth: 'calc(100vw - 28px)', overflow: 'hidden' }}>
@@ -471,11 +479,11 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
               </h1>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
-              <span style={{ width: 16, height: 16, borderRadius: '50%', background: winnerColor, boxShadow: `0 0 16px ${winnerColor}` }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+              <span style={{ width: 13, height: 13, borderRadius: '50%', background: winnerColor, boxShadow: `0 0 14px ${winnerColor}` }} />
               <h1 style={{
                 fontFamily: 'var(--ff-display)', fontWeight: 700,
-                fontSize: 50, margin: 0, letterSpacing: '0.02em',
+                fontSize: 38, margin: 0, letterSpacing: '0.02em',
                 background: 'linear-gradient(180deg,#fff,#d6e2f2)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
@@ -484,7 +492,7 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
             </div>
           )}
 
-          <p style={{ margin: `${isMobile ? 8 : 10}px 0 0`, fontSize: isMobile ? 13 : 15, fontWeight: 600, color: 'var(--text-dim)', textAlign: 'center' }}>
+          <p style={{ margin: `${isMobile ? 6 : 8}px 0 0`, fontSize: isMobile ? 13 : 13.5, fontWeight: 600, color: 'var(--text-dim)', textAlign: 'center' }}>
             {humanLost && humanRankedEntry ? (
               <span>
                 You finished{' '}
@@ -563,20 +571,20 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
         {/* action buttons */}
         <div style={{
           display: 'flex', gap: isMobile ? 8 : 12,
-          marginTop: isMobile ? 14 : 22,
+          marginTop: isMobile ? 12 : 14,
           justifyContent: 'center',
           flexDirection: isMobile ? 'column' : 'row',
           padding: isMobile ? '0 4px' : undefined,
         }}>
           <button onClick={onMenu} className="btn"
-            style={{ padding: isMobile ? '13px 0' : '14px 26px', fontSize: isMobile ? 14 : 14.5, fontWeight: 700, fontFamily: 'var(--ff-display)', letterSpacing: '0.04em' }}>
+            style={{ padding: isMobile ? '13px 0' : '10px 22px', fontSize: isMobile ? 14 : 13.5, fontWeight: 700, fontFamily: 'var(--ff-display)', letterSpacing: '0.04em' }}>
             Main Menu
           </button>
           <button
             onClick={onReplay}
             disabled={replayLoading}
             className="btn"
-            style={{ padding: isMobile ? '13px 0' : '14px 26px', fontSize: isMobile ? 14 : 14.5, fontWeight: 700, fontFamily: 'var(--ff-display)', letterSpacing: '0.04em', borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: replayLoading ? 0.7 : 1 }}
+            style={{ padding: isMobile ? '13px 0' : '10px 22px', fontSize: isMobile ? 14 : 13.5, fontWeight: 700, fontFamily: 'var(--ff-display)', letterSpacing: '0.04em', borderColor: 'rgba(160,130,235,0.4)', color: '#c4b5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: replayLoading ? 0.7 : 1 }}
           >
             {replayLoading ? (
               <>
@@ -586,7 +594,7 @@ export function GameOverScreen({ gameState, humanPlayerIndices, onPlayAgain, onM
             ) : '📼 Replay'}
           </button>
           <button onClick={onPlayAgain} className="btn btn-primary"
-            style={{ padding: isMobile ? '13px 0' : '14px 32px', fontSize: isMobile ? 14 : 14.5, fontWeight: 700, fontFamily: 'var(--ff-display)', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            style={{ padding: isMobile ? '13px 0' : '10px 28px', fontSize: isMobile ? 14 : 13.5, fontWeight: 700, fontFamily: 'var(--ff-display)', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
             <Icon name="dice" size={17} color="#fff" />
             {humanLost ? 'Rematch' : 'Play Again'}
           </button>
