@@ -165,8 +165,8 @@ export default function RoadEdge3D({
         />
       ) : (
         /* Legal move indicator */
-        <mesh ref={pulseRef} castShadow>
-          <boxGeometry args={[effectiveLength, ROAD_HEIGHT * 0.7, ROAD_WIDTH * 0.7]} />
+        <mesh ref={pulseRef} renderOrder={2}>
+          <boxGeometry args={[effectiveLength, ROAD_HEIGHT * 0.7, ROAD_WIDTH * 0.9]} />
           <meshStandardMaterial
             color={isPreview ? (isHoveredLegal ? '#86efac' : '#4ade80') : (isHoveredLegal ? '#90caf9' : '#64b5f6')}
             emissive={isPreview ? '#16a34a' : '#3080c0'}
@@ -175,6 +175,7 @@ export default function RoadEdge3D({
             opacity={isHoveredLegal ? 0.85 : 0.55}
             roughness={0.5}
             depthWrite={false}
+            depthTest={false}
           />
         </mesh>
       )}
