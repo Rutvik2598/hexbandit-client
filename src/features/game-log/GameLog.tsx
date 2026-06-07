@@ -14,7 +14,7 @@ export default function GameLog() {
   const visible = logEntries.filter(e => e.level === 'action');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 90, flex: 1 }}>
       <div className="eyebrow" style={{ padding: '0 2px 8px', flexShrink: 0 }}>
         Game Log
       </div>

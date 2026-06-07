@@ -88,7 +88,7 @@ export function ResourceHand({
       }} />
 
       {/* Dev card stacks */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-end', gap: 10 }}>
+      <div style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'flex-end', gap: 10 }}>
         {heldTypes.length === 0
           ? <DevHandEmpty />
           : heldTypes.map(t => (

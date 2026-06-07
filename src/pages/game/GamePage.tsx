@@ -43,8 +43,8 @@ type MobileDrawerTab = 'action' | 'players' | 'trade' | null;
 // Desktop: 14px margins, 344px sidebar, 372px camera offset
 // Tablet:  10px margins, 260px sidebar, 280px camera offset
 const LAYOUT = {
-  desktop: { gap: 14, panelW: 344, camOffset: 372, bottomOffset: 20 },
-  tablet:  { gap: 10, panelW: 260, camOffset: 280, bottomOffset: 14 },
+  desktop: { gap: 14, panelW: 312, camOffset: 340, bottomOffset: 20 },
+  tablet:  { gap: 10, panelW: 236, camOffset: 256, bottomOffset: 14 },
   mobile:  { gap: 8,  panelW: 0,   camOffset: 0,   bottomOffset: 0  },
 } as const;
 
@@ -60,7 +60,6 @@ export default function GamePage() {
   const thinking           = useGameStore(s => s.thinking);
   const replayMode         = useGameStore(s => s.replayMode);
   const resourceGains      = useGameStore(s => s.resourceGains);
-  const perspectiveColor   = useGameStore(s => s.perspectiveColor);
   const setHumanPlayers    = useGameStore(s => s.setHumanPlayers);
   const setPerspectiveColor = useGameStore(s => s.setPerspectiveColor);
   const reset              = useGameStore(s => s.reset);
@@ -1156,30 +1155,11 @@ export default function GamePage() {
 
           <span style={{ width: 1, height: 20, background: 'var(--hairline)', flexShrink: 0 }} />
 
-          {/* Turn / phase */}
+          {/* Turn number */}
           {gameState && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-dim)' }}>
-                Turn <span style={{ color: 'var(--text)' }}>{gameState.num_turns}</span>
-              </span>
-              {currentColor && (
-                <>
-                  <span style={{ fontSize: 12, color: 'var(--text-ghost)' }}>·</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: PLAYER_COLORS[currentColor] }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: PLAYER_COLORS[currentColor], boxShadow: `0 0 8px ${PLAYER_COLORS[currentColor]}` }} />
-                    {currentColor}'s turn
-                  </span>
-                  {bp === 'desktop' && (
-                    <>
-                      <span style={{ fontSize: 12, color: 'var(--text-ghost)' }}>·</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>
-                        {formatPhase(gameState.game_phase)}
-                      </span>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-dim)', flexShrink: 0 }}>
+              Turn <span style={{ color: 'var(--text)' }}>{gameState.num_turns}</span>
+            </span>
           )}
 
           {/* Eval bar inline on desktop only */}
@@ -1250,7 +1230,7 @@ export default function GamePage() {
 
       {gameState && (
         <div style={{
-          position: 'absolute', left: gap, bottom: bottomOffset, zIndex: 12,
+          position: 'absolute', left: gap, right: panelW + gap, bottom: bottomOffset, zIndex: 12,
           display: 'flex', alignItems: 'flex-end', gap: 16,
           pointerEvents: 'none',
         }}>
@@ -1266,7 +1246,7 @@ export default function GamePage() {
             ) : (
               <div className="scrollbar-none" style={{ display: 'flex', flexDirection: 'column', gap: 7, pointerEvents: 'auto', maxHeight: `calc(100vh - ${gap * 2 + 96 + bottomOffset}px)`, overflowY: 'auto' }}>
                 {needsSpecialAction ? (
-                  <ActionPanel onAction={handleAction} disabled={isDisabled} />
+                  <ActionPanel onAction={handleAction} disabled={isDisabled} floatTrade />
                 ) : (
                   <>
                     {humanPlayer && (
@@ -1330,7 +1310,7 @@ export default function GamePage() {
           )}
 
           {humanPlayer && !replayMode && (
-            <div style={{ pointerEvents: 'auto' }}>
+            <div className="scrollbar-none" style={{ flex: 1, minWidth: 0, overflowX: 'auto', pointerEvents: 'auto', paddingTop: 28, marginTop: -28 }}>
               <ResourceHand
                 resources={humanPlayer.resources}
                 devCards={humanPlayer.dev_cards_private}
@@ -1346,11 +1326,11 @@ export default function GamePage() {
       <div className="panel" style={{
         position: 'absolute', top: gap, right: gap, bottom: gap, width: panelW, zIndex: 10,
         display: 'flex', flexDirection: 'column',
-        padding: bp === 'tablet' ? 12 : 16,
-        gap: 14, overflow: 'hidden',
+        padding: bp === 'tablet' ? 10 : 13,
+        gap: 12, overflow: 'hidden',
       }}>
         <div style={{
-          flexShrink: 0, display: 'flex', borderRadius: 10, overflow: 'hidden',
+          flexShrink: 0, display: 'flex', borderRadius: 9, overflow: 'hidden',
           background: 'var(--bg-1)', border: '1px solid var(--hairline)',
         }}>
           {(['players', 'analysis'] as const).map(tab => {
@@ -1360,7 +1340,7 @@ export default function GamePage() {
                 key={tab}
                 onClick={() => setSidebarTab(tab)}
                 style={{
-                  flex: 1, padding: '8px 0', fontSize: 11, fontWeight: 700,
+                  flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 700,
                   letterSpacing: '0.1em', textTransform: 'uppercase',
                   background: sidebarTab === tab ? 'var(--glass-hi)' : 'transparent',
                   color: sidebarTab === tab ? 'var(--text)' : 'var(--text-faint)',
@@ -1396,6 +1376,8 @@ export default function GamePage() {
                 bank={bankResources}
                 canTrade={canTrade}
                 onTrade={() => setShowTradeModal(true)}
+                canOfferTrade={isOfferTradeAllowed}
+                onOfferTrade={() => setShowOfferTradeModal(true)}
               />
             </>
           )}
@@ -1413,21 +1395,6 @@ export default function GamePage() {
           )}
         </div>
 
-        {perspectiveColor && (
-          <div style={{
-            flexShrink: 0, display: 'flex', alignItems: 'center', gap: 7,
-            padding: '8px 2px 0', borderTop: '1px solid var(--hairline)',
-          }}>
-            <span style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: PLAYER_COLORS[perspectiveColor as PlayerColor] || '#ccc',
-              boxShadow: `0 0 8px ${PLAYER_COLORS[perspectiveColor as PlayerColor] || '#ccc'}`,
-            }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)' }}>
-              Playing as {perspectiveColor}
-            </span>
-          </div>
-        )}
       </div>
 
       <PlacementHint
@@ -1445,15 +1412,3 @@ export default function GamePage() {
   );
 }
 
-function formatPhase(phase: string): string {
-  const labels: Record<string, string> = {
-    INITIAL_BUILD:    'Setup',
-    PLAY_TURN:        'Playing',
-    DISCARDING:       'Discarding',
-    MOVING_ROBBER:    'Moving Robber',
-    ROAD_BUILDING:    'Road Building',
-    RESOLVING_TRADE:  'Trade',
-    DECIDE_ACCEPTEES: 'Confirm Trade',
-  };
-  return labels[phase] || phase;
-}

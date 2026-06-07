@@ -89,7 +89,7 @@ function BuildButton({ label, iconName, cost, resources, rolled, isMyTurn, avail
       {/* label + cost chips */}
       <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 }}>
         <span style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '0.01em' }}>{label}</span>
-        <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
           {Object.entries(cost).map(([k, v]) => {
             const has = (resources[k] ?? 0) >= (v ?? 0);
             return (
@@ -429,7 +429,7 @@ export interface ActionPanelProps {
   floatTrade?: boolean;
 }
 
-export default function ActionPanel({ onAction, disabled, width = 190, floatTrade = false }: ActionPanelProps) {
+export default function ActionPanel({ onAction, disabled, width = 196, floatTrade = false }: ActionPanelProps) {
   const gameState     = useGameStore(s => s.gameState);
   const thinking      = useGameStore(s => s.thinking);
   const lastRollDice  = useGameStore(s => s.lastRollDice);
@@ -444,7 +444,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
   const playableActions = gameState?.playable_actions ?? [];
   const phase = gameState?.game_phase;
   const isHumanTurn    = humanIndices.includes(gameState?.current_player_index ?? -1);
-  const currentPlayer  = gameState?.players[gameState.current_player_index];
   const humanPlayer    = gameState?.players[humanIndices[0] ?? -1];
   const resources      = humanPlayer?.resources ?? {};
 
@@ -460,8 +459,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
   const hasTradeResponse = !isDecideAcceptees && playableActions.some(a =>
     a.action_type === 'ACCEPT_TRADE' || a.action_type === 'REJECT_TRADE' ||
     a.action_type === 'CANCEL_TRADE');
-  const isOfferTradeAllowed = !!(gameState?.is_trade_allowed) && isHumanTurn && !disabled;
-
   const currentTrade = gameState?.current_trade ?? [];
   const offererIdx   = currentTrade[10] ?? 0;
   const playersList  = (gameState?.players ?? []).map(p => ({ name: p.name, color: p.color }));
@@ -506,58 +503,8 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
   ];
 
 
-  // ---- persistent status card content ----
-  const statusContent = (() => {
-    if (!humanIndices.length) return null;
-    if (!isHumanTurn) return {
-      eyebrow: 'Waiting',
-      text: `${currentPlayer?.name ?? 'Opponent'} is playing…`, textColor: 'var(--text-faint)' as string,
-      progress: null,
-    };
-    if (hasDiscard) return { eyebrow: 'Action Required', text: 'Choose cards to discard', textColor: 'var(--p-red)' as string, progress: null };
-    if (hasMoveRobber) return { eyebrow: 'Place Robber', text: 'Click a tile to move the robber', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (isDecideAcceptees) return { eyebrow: 'Trade', text: 'Pick who to trade with', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (hasTradeResponse) return { eyebrow: 'Trade Offer', text: 'Respond to the trade offer', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (phase === 'INITIAL_BUILD' && hasBuildSettlement) return { eyebrow: 'Setup Phase', text: 'Place your settlement on a corner', textColor: '#6ee7b7' as string, progress: null };
-    if (phase === 'INITIAL_BUILD' && hasBuildRoad) return { eyebrow: 'Setup Phase', text: 'Place a road next to your settlement', textColor: '#6ee7b7' as string, progress: null };
-    if (hasRoll) return { eyebrow: 'Your Turn', text: 'Roll the dice to start', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (mode === 'BUILD_ROAD' || roadIsForced) return { eyebrow: 'Build Mode', text: 'Click a glowing edge to place road', textColor: 'var(--sapphire-bright)' as string, progress: null };
-    if (mode === 'BUILD_SETTLEMENT') return { eyebrow: 'Build Mode', text: 'Click a glowing corner to place settlement', textColor: '#6ee7b7' as string, progress: null };
-    if (mode === 'BUILD_CITY') return { eyebrow: 'Build Mode', text: 'Click a settlement to upgrade to city', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (hasEndTurn) return { eyebrow: 'Your Turn', text: 'Build, trade, or end your turn', textColor: 'var(--text-dim)' as string, progress: null };
-    return { eyebrow: 'Your Turn', text: 'Awaiting action…', textColor: 'var(--text-faint)' as string, progress: null };
-  })();
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width, pointerEvents: 'auto' }}>
-
-      {statusContent && (
-        <div className="panel" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <div
-            className="eyebrow"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <span>{statusContent.eyebrow}</span>
-            {statusContent.progress !== null && (
-              <span style={{ fontSize: 10, color: 'var(--text-faint)', fontFamily: 'var(--ff-mono, monospace)' }}>
-                {Math.round(statusContent.progress)}%
-              </span>
-            )}
-          </div>
-          <div style={{ fontSize: 12, color: statusContent.textColor, lineHeight: 1.4 }}>
-            {statusContent.text}
-          </div>
-          {statusContent.progress !== null && (
-            <div style={{ height: 3, background: 'var(--glass-hi)', borderRadius: 4, overflow: 'hidden' }}>
-              <motion.div
-                style={{ height: '100%', background: 'var(--sapphire-bright)', borderRadius: 4 }}
-                animate={{ width: `${statusContent.progress}%` }}
-                transition={{ duration: 0.3 }}
-              />
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Special phase panels — only shown during human's turn */}
       {isHumanTurn && hasDiscard && <DiscardPanel onAction={onAction} disabled={disabled} />}
@@ -656,28 +603,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
         )}
 
       </div>
-
-      {isHumanTurn && !hasDiscard && !hasMoveRobber && !isDecideAcceptees && !hasTradeResponse && (
-        <div className="panel" style={{ padding: '10px 12px' }}>
-          <div className="eyebrow" style={{ marginBottom: 8 }}>Player Trade</div>
-          <button
-            onClick={() => onAction({ action_type: 'OFFER_TRADE', value: '__open_modal__' })}
-            disabled={!isOfferTradeAllowed}
-            className="btn"
-            style={{
-              width: '100%', padding: '9px 0', fontSize: 12.5,
-              fontFamily: 'var(--ff-display)', fontWeight: 700, letterSpacing: '0.04em',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              borderColor: isOfferTradeAllowed ? 'rgba(63,135,242,0.45)' : 'var(--hairline)',
-              color: isOfferTradeAllowed ? 'var(--sapphire-bright)' : 'var(--text-ghost)',
-              opacity: isOfferTradeAllowed ? 1 : 0.5,
-            }}
-          >
-            <Icon name="swap" size={14} color={isOfferTradeAllowed ? 'var(--sapphire-bright)' : 'var(--text-ghost)'} />
-            {isOfferTradeAllowed ? 'Offer Trade' : 'Roll first'}
-          </button>
-        </div>
-      )}
 
       <div className="panel" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
         <div className="eyebrow" style={{ padding: '0 1px 1px' }}>Build</div>

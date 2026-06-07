@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
 function classify(width: number): Breakpoint {
-  if (width < 768) return 'mobile';
-  if (width < 1024) return 'tablet';
+  if (width < 1024) return 'mobile';
+  if (width < 1280) return 'tablet';
   return 'desktop';
 }
 

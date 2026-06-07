@@ -8,9 +8,11 @@ interface BankPanelProps {
   bank: ResourceCounts;
   canTrade: boolean;
   onTrade: () => void;
+  canOfferTrade?: boolean;
+  onOfferTrade?: () => void;
 }
 
-export function BankPanel({ bank, canTrade, onTrade }: BankPanelProps) {
+export function BankPanel({ bank, canTrade, onTrade, canOfferTrade, onOfferTrade }: BankPanelProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
       <div className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -47,23 +49,41 @@ export function BankPanel({ bank, canTrade, onTrade }: BankPanelProps) {
         })}
       </div>
 
-      {/* trade button */}
-      <button
-        onClick={() => canTrade && onTrade()}
-        disabled={!canTrade}
-        className={`btn${canTrade ? ' btn-amber' : ''}`}
-        style={{
-          padding: '11px 0',
-          fontSize: 13,
-          fontWeight: 800,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-          letterSpacing: '0.02em',
-          width: '100%',
-        }}
-      >
-        <Icon name="swap" size={15} color={canTrade ? '#2a1a05' : 'var(--text-faint)'} />
-        Trade with Bank
-      </button>
+      {/* trade buttons */}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          onClick={() => canTrade && onTrade()}
+          disabled={!canTrade}
+          className={`btn${canTrade ? ' btn-amber' : ''}`}
+          style={{
+            flex: 1, padding: '10px 0',
+            fontSize: 12, fontWeight: 800,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+          }}
+        >
+          <Icon name="bank" size={13} color={canTrade ? '#2a1a05' : 'var(--text-faint)'} />
+          Bank
+        </button>
+
+        {onOfferTrade !== undefined && (
+          <button
+            onClick={() => canOfferTrade && onOfferTrade()}
+            disabled={!canOfferTrade}
+            className="btn"
+            style={{
+              flex: 1, padding: '10px 0',
+              fontSize: 12, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              borderColor: canOfferTrade ? 'rgba(63,135,242,0.45)' : 'var(--hairline)',
+              color: canOfferTrade ? 'var(--sapphire-bright)' : 'var(--text-ghost)',
+              opacity: canOfferTrade ? 1 : 0.55,
+            }}
+          >
+            <Icon name="users" size={13} color={canOfferTrade ? 'var(--sapphire-bright)' : 'var(--text-ghost)'} />
+            Players
+          </button>
+        )}
+      </div>
     </div>
   );
 }
