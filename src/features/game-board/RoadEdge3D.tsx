@@ -71,6 +71,7 @@ interface RoadEdge3DProps {
   ownerColor?: PlayerColor | null;
   isLegal?: boolean;
   isHovered?: boolean;
+  isPreview?: boolean;
   onClick?: () => void;
   onPointerEnter?: () => void;
   onPointerLeave?: () => void;
@@ -82,6 +83,7 @@ export default function RoadEdge3D({
   ownerColor,
   isLegal,
   isHovered,
+  isPreview,
   onClick,
   onPointerEnter,
   onPointerLeave,
@@ -166,8 +168,8 @@ export default function RoadEdge3D({
         <mesh ref={pulseRef} castShadow>
           <boxGeometry args={[effectiveLength, ROAD_HEIGHT * 0.7, ROAD_WIDTH * 0.7]} />
           <meshStandardMaterial
-            color={isHoveredLegal ? '#90caf9' : '#64b5f6'}
-            emissive="#3080c0"
+            color={isPreview ? (isHoveredLegal ? '#86efac' : '#4ade80') : (isHoveredLegal ? '#90caf9' : '#64b5f6')}
+            emissive={isPreview ? '#16a34a' : '#3080c0'}
             emissiveIntensity={0.3}
             transparent
             opacity={isHoveredLegal ? 0.85 : 0.55}

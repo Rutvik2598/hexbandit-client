@@ -94,7 +94,7 @@ function City({ color }: { color: PlayerColor }) {
   );
 }
 
-function LegalIndicator({ isHovered }: { isHovered?: boolean }) {
+function LegalIndicator({ isHovered, isPreview }: { isHovered?: boolean; isPreview?: boolean }) {
   const ringRef = useRef<THREE.Mesh>(null);
 
   useFrame(({ clock }) => {
@@ -118,7 +118,7 @@ function LegalIndicator({ isHovered }: { isHovered?: boolean }) {
       <mesh ref={ringRef} position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={11}>
         <ringGeometry args={[0.13, 0.28, 48]} />
         <meshBasicMaterial
-          color={isHovered ? '#90caf9' : '#4f8dff'}
+          color={isPreview ? (isHovered ? '#86efac' : '#4ade80') : (isHovered ? '#90caf9' : '#4f8dff')}
           transparent
           opacity={0.38}
           depthWrite={false}
@@ -136,6 +136,7 @@ interface VertexNode3DProps {
   isLegalSettlement?: boolean;
   isLegalCity?: boolean;
   isHovered?: boolean;
+  isPreview?: boolean;
   onClick?: () => void;
   onPointerEnter?: () => void;
   onPointerLeave?: () => void;
@@ -147,6 +148,7 @@ export default function VertexNode3D({
   isLegalSettlement,
   isLegalCity,
   isHovered,
+  isPreview,
   onClick,
   onPointerEnter,
   onPointerLeave,
@@ -166,7 +168,7 @@ export default function VertexNode3D({
     >
       {building?.type === 'SETTLEMENT' && <Settlement color={building.color} />}
       {building?.type === 'CITY' && <City color={building.color} />}
-      {(isLegalSettlement || isLegalCity) && <LegalIndicator isHovered={isHovered} />}
+      {(isLegalSettlement || isLegalCity) && <LegalIndicator isHovered={isHovered} isPreview={isPreview} />}
     </group>
   );
 }

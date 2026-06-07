@@ -363,6 +363,10 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
   const setHoveredEdge = useInteractionStore(s => s.setHoveredEdge);
   const setHoveredTile = useInteractionStore(s => s.setHoveredTile);
   const mode = useInteractionStore(s => s.mode);
+  const previewNode = useInteractionStore(s => s.previewNode);
+  const previewEdge = useInteractionStore(s => s.previewEdge);
+  const previewTile = useInteractionStore(s => s.previewTile);
+  const previewType = useInteractionStore(s => s.previewType);
 
   const textures = useTexture({
     WOOD:   '/assets/tiles/wood.png',
@@ -533,8 +537,10 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
       {Object.entries(board.tiles).map(([key, tile]) => {
         const [x, y, z] = parseCubeKey(key);
         const pos = tileToWorld3D(x, y);
-        const isRobberHere = robberKey === cubeToKey(x, y, z);
-        const isLegalRobber = showRobberHighlights && legalRobberTiles.has(cubeToKey(x, y, z));
+        const tileKey = cubeToKey(x, y, z);
+        const isRobberHere  = robberKey === tileKey;
+        const isPreviewTile = previewTile === tileKey;
+        const isLegalRobber = (showRobberHighlights && legalRobberTiles.has(tileKey)) || isPreviewTile;
         const resource = tile.resource ?? 'DESERT';
         const tex = textures[resource as keyof typeof textures] ?? null;
 
@@ -546,9 +552,10 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
             texture={tex}
             hasRobber={isRobberHere}
             isLegalRobber={isLegalRobber}
+            isPreview={isPreviewTile}
             isActive={activeRollSum !== null && tile.number === activeRollSum}
-            onClick={() => handleTileClick(key)}
-            onPointerEnter={() => setHoveredTile(key)}
+            onClick={() => handleTileClick(tileKey)}
+            onPointerEnter={() => setHoveredTile(tileKey)}
             onPointerLeave={() => setHoveredTile(null)}
           />
         );
@@ -560,8 +567,9 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
         const reverseKey = `(${a}, ${b})`;
         const reverseKey2 = `(${b}, ${a})`;
         const ownerColor = board.roads[reverseKey] ?? board.roads[reverseKey2] ?? null;
-        const isLegalRoad = showRoadHighlights && legalRoadEdges.has(key);
-        const isHov = hoveredEdge ? edgeKey(hoveredEdge[0], hoveredEdge[1]) === key : false;
+        const isPreviewRoad = previewType === 'road' && previewEdge != null && edgeKey(previewEdge[0], previewEdge[1]) === key;
+        const isLegalRoad = (showRoadHighlights && legalRoadEdges.has(key)) || isPreviewRoad;
+        const isHov = isPreviewRoad || (hoveredEdge ? edgeKey(hoveredEdge[0], hoveredEdge[1]) === key : false);
 
         if (!ownerColor && !isLegalRoad) return null;
 
@@ -576,6 +584,7 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
             ownerColor={ownerColor as PlayerColor | null}
             isLegal={isLegalRoad}
             isHovered={isHov}
+            isPreview={isPreviewRoad}
             onClick={() => handleEdgeClick(a, b)}
             onPointerEnter={() => setHoveredEdge([a, b])}
             onPointerLeave={() => setHoveredEdge(null)}
@@ -591,9 +600,11 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
       {/* Vertex nodes (settlements & cities) */}
       {Array.from({ length: 54 }, (_, nodeId) => {
         const building = board.buildings[String(nodeId)] ?? null;
-        const isLegalS = showSettlementHighlights && legalSettlementNodes.has(nodeId);
-        const isLegalC = showCityHighlights && legalCityNodes.has(nodeId);
-        const isHov = hoveredNode === nodeId;
+        const isPreviewS = previewType === 'settlement' && previewNode === nodeId;
+        const isPreviewC = previewType === 'city'       && previewNode === nodeId;
+        const isLegalS = (showSettlementHighlights && legalSettlementNodes.has(nodeId)) || isPreviewS;
+        const isLegalC = (showCityHighlights && legalCityNodes.has(nodeId)) || isPreviewC;
+        const isHov = previewNode === nodeId || hoveredNode === nodeId;
         const pos = nodeToWorld3D(nodeId);
 
         return (
@@ -604,6 +615,7 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
             isLegalSettlement={isLegalS}
             isLegalCity={isLegalC}
             isHovered={isHov}
+            isPreview={isPreviewS || isPreviewC}
             onClick={() => handleNodeClick(nodeId)}
             onPointerEnter={() => setHoveredNode(nodeId)}
             onPointerLeave={() => setHoveredNode(null)}

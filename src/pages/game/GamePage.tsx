@@ -29,6 +29,7 @@ import { useSoundEffects } from '@/shared/hooks/useSoundEffects';
 import { playSound, SFX } from '@/shared/hooks/useSound';
 import { useKeyboardShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { SettingsPanel } from '@/features/settings/SettingsPanel';
+import { LiveSuggestions } from '@/features/analysis-panel/AnalysisPanel';
 import { addToast } from '@/store/toastStore';
 import { AnnouncementBanner } from '@/shared/components/AnnouncementBanner';
 import type { AchievementData } from '@/shared/components/AnnouncementBanner';
@@ -63,6 +64,7 @@ export default function GamePage() {
   const reset              = useGameStore(s => s.reset);
   const lastRollDice       = useGameStore(s => s.lastRollDice);
   const logEntries         = useGameStore(s => s.logEntries);
+  const lastActionsPwin    = useGameStore(s => s.lastActionsPwin);
 
   const mode    = useInteractionStore(s => s.mode);
   const setMode = useInteractionStore(s => s.setMode);
@@ -97,9 +99,10 @@ export default function GamePage() {
 
   useSoundEffects();
 
-  const initialized        = useRef(false);
-  const prevGains          = useRef(resourceGains);
-  const prevDiceRef        = useRef<typeof lastRollDice>(lastRollDice);
+  const initialized          = useRef(false);
+  const prevGains            = useRef(resourceGains);
+  const prevDiceRef          = useRef<typeof lastRollDice>(lastRollDice);
+  const suggestionClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevNeedsSpecial   = useRef(false);
   const prevPlayersRef     = useRef<Player[] | null>(null);
   const prevHumanTurnRef   = useRef<boolean | null>(null);
@@ -284,13 +287,19 @@ export default function GamePage() {
     ? gameState?.players[humanPlayerIndices[0]]
     : null;
 
-  // ── Auto-activate BUILD_ROAD during initial placement on all breakpoints ──
+  // ── Auto-activate BUILD_ROAD during initial placement and Road Building card ──
   // ActionPanel has the same logic but isn't mounted on mobile when the drawer
   // is closed. Centralising it here ensures consistent behaviour everywhere.
-  const isRoadForced = hasBuildRoad && !hasRoll && !hasBuildSettlement && !hasBuildCity && !hasEndTurn && !hasDiscard;
+  //
+  // Two cases:
+  //   1. Initial placement — road is the ONLY available action (no roll / end-turn / etc.)
+  //   2. Road Building dev card — game_phase is 'ROAD_BUILDING'; END_TURN may still be in
+  //      playable_actions (forfeit road), so we can't rely on !hasEndTurn here.
+  const isRoadForced        = hasBuildRoad && !hasRoll && !hasBuildSettlement && !hasBuildCity && !hasEndTurn && !hasDiscard;
+  const isRoadBuildingPhase = gameState?.game_phase === 'ROAD_BUILDING' && hasBuildRoad && isHumanTurn;
   useEffect(() => {
-    if (isRoadForced && !isDisabled) setMode('BUILD_ROAD');
-  }, [isRoadForced, isDisabled, setMode]);
+    if ((isRoadForced || isRoadBuildingPhase) && !isDisabled) setMode('BUILD_ROAD');
+  }, [isRoadForced, isRoadBuildingPhase, isDisabled, setMode]);
 
   const bankResources = (gameState?.bank_resources ?? {}) as ResourceCounts;
 
@@ -354,6 +363,14 @@ export default function GamePage() {
 
   // Wire keyboard shortcuts — must come after handleAction is defined.
   useKeyboardShortcuts({ onAction: handleAction });
+
+  const handleSuggestionLocationTap = useCallback(() => {
+    setMobileDrawer(null);
+    if (suggestionClearTimer.current) clearTimeout(suggestionClearTimer.current);
+    suggestionClearTimer.current = setTimeout(() => {
+      useInteractionStore.getState().clearPreviewHighlight();
+    }, 3000);
+  }, []);
 
   const handleShare = useCallback(() => {
     if (!gameId) return;
@@ -950,6 +967,13 @@ export default function GamePage() {
                 )}
                 {mobileDrawer === 'players' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {/* Live best-move suggestions — visible on human turn */}
+                    {!replayMode && (isHumanTurn || !!lastActionsPwin?.length) && (
+                      <>
+                        <LiveSuggestions compact onLocationTap={handleSuggestionLocationTap} />
+                        <div style={{ height: 1, background: 'var(--hairline)' }} />
+                      </>
+                    )}
                     <PlayerPanel />
                     <div style={{ height: 1, background: 'var(--hairline)' }} />
                     {/* Capped scrollable log — doesn't push bank off screen */}
@@ -1366,22 +1390,36 @@ export default function GamePage() {
           flexShrink: 0, display: 'flex', borderRadius: 10, overflow: 'hidden',
           background: 'var(--bg-1)', border: '1px solid var(--hairline)',
         }}>
-          {(['players', 'analysis'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setSidebarTab(tab)}
-              style={{
-                flex: 1, padding: '8px 0', fontSize: 11, fontWeight: 700,
-                letterSpacing: '0.1em', textTransform: 'uppercase',
-                background: sidebarTab === tab ? 'var(--glass-hi)' : 'transparent',
-                color: sidebarTab === tab ? 'var(--text)' : 'var(--text-faint)',
-                border: 'none', borderBottom: `2px solid ${sidebarTab === tab ? 'var(--sapphire-bright)' : 'transparent'}`,
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}
-            >
-              {tab}
-            </button>
-          ))}
+          {(['players', 'analysis'] as const).map(tab => {
+            const hasBadge = tab === 'analysis' && !replayMode && isHumanTurn && !!lastActionsPwin?.length && sidebarTab !== 'analysis';
+            return (
+              <button
+                key={tab}
+                onClick={() => setSidebarTab(tab)}
+                style={{
+                  flex: 1, padding: '8px 0', fontSize: 11, fontWeight: 700,
+                  letterSpacing: '0.1em', textTransform: 'uppercase',
+                  background: sidebarTab === tab ? 'var(--glass-hi)' : 'transparent',
+                  color: sidebarTab === tab ? 'var(--text)' : 'var(--text-faint)',
+                  border: 'none', borderBottom: `2px solid ${sidebarTab === tab ? 'var(--sapphire-bright)' : 'transparent'}`,
+                  cursor: 'pointer', transition: 'all 0.15s',
+                  position: 'relative',
+                }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  {tab}
+                  {hasBadge && (
+                    <span style={{
+                      width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                      background: 'var(--amber)',
+                      boxShadow: '0 0 6px var(--amber-glow)',
+                      animation: 'thinking-pulse 2s ease-in-out infinite',
+                    }} />
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab content */}
@@ -1403,9 +1441,9 @@ export default function GamePage() {
           {sidebarTab === 'analysis' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <AnalysisPanel />
-              {!replayMode && (
+              {replayMode && (
                 <div style={{ fontSize: 11.5, color: 'var(--text-ghost)', textAlign: 'center' }}>
-                  Full analysis available in replay mode
+                  Scrub through moves to load analysis
                 </div>
               )}
             </div>

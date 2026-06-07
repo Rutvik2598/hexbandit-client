@@ -480,11 +480,14 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
 
   const rolled = !hasRoll && !!lastRollDice;
 
-  // Auto-activate road mode when it's the only action
-  const roadIsForced = hasBuildRoad && !hasRoll && !hasBuildSettlement && !hasBuildCity && !hasEndTurn && !hasDiscard && !hasMoveRobber;
+  // Auto-activate road mode when it's the only action (initial placement)
+  // OR when the Road Building dev card is active — END_TURN may still appear
+  // in playable_actions (forfeit road) so we can't block on !hasEndTurn there.
+  const roadIsForced        = hasBuildRoad && !hasRoll && !hasBuildSettlement && !hasBuildCity && !hasEndTurn && !hasDiscard && !hasMoveRobber;
+  const isRoadBuildingPhase = phase === 'ROAD_BUILDING' && hasBuildRoad && isHumanTurn;
   useEffect(() => {
-    if (roadIsForced && !disabled) setMode('BUILD_ROAD');
-  }, [roadIsForced, disabled, setMode]);
+    if ((roadIsForced || isRoadBuildingPhase) && !disabled) setMode('BUILD_ROAD');
+  }, [roadIsForced, isRoadBuildingPhase, disabled, setMode]);
 
   // Track roll animation: start when ROLL is submitted, stop when dice arrive
   const handleRoll = () => {

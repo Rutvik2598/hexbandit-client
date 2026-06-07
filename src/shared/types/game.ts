@@ -156,6 +156,8 @@ export interface ActionPwin {
   action_label: string;
   pwin_by_color: PwinByColor;
   confidence: number;
+  /** Raw action value from the server — present when the API includes it. */
+  value?: unknown;
 }
 
 export interface PwinResult {

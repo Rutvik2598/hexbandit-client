@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Icon } from '@/shared/components/Icon';
 import { useAuthStore } from '@/store/authStore';
+import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
 // ---- Mock profile data (extends the auth user with game history) ------------
 
@@ -49,6 +50,8 @@ interface ProfileModalProps {
 export function ProfileModal({ onClose }: ProfileModalProps) {
   const user = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
 
   if (!user) return null;
 
@@ -138,7 +141,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
         </div>
 
         {/* Stats grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 22 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10, marginBottom: 22 }}>
           {[
             { label: 'Games',    value: MOCK_STATS.gamesPlayed },
             { label: 'Wins',     value: MOCK_STATS.wins        },
@@ -232,7 +235,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
 
         {/* Achievements */}
         <div className="eyebrow" style={{ marginBottom: 10 }}>Achievements</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 22 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8, marginBottom: 22 }}>
           {ACHIEVEMENTS.map((a, i) => (
             <motion.div
               key={a.label}
@@ -253,7 +256,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
               }} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)', marginBottom: 1 }}>{a.label}</div>
-                <div style={{ fontSize: 10.5, color: 'var(--text-faint)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.desc}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-faint)', fontWeight: 500, lineHeight: 1.4 }}>{a.desc}</div>
               </div>
             </motion.div>
           ))}

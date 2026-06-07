@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GameState, PwinByColor, PwinResult, AnalysisResult, RecordingFrame, PlayerColor } from '@/shared/types/game';
+import type { GameState, PwinByColor, PwinResult, ActionPwin, AnalysisResult, RecordingFrame, PlayerColor } from '@/shared/types/game';
 import { PWIN_SMOOTH_ALPHA } from '@/shared/constants';
 
 type ThinkingPhase = 'idle' | 'submitting' | 'thinking' | 'applying' | 'done' | 'error';
@@ -39,6 +39,10 @@ interface GameStore {
   lastPwin: PwinByColor | null;
   lastPwinStep: number;
   isEvaluating: boolean;
+  // Raw (un-smoothed) pwin for the current position — used for delta calculations
+  lastRawPwin: PwinByColor | null;
+  // Top candidate moves from the most recent eval
+  lastActionsPwin: ActionPwin[] | null;
 
   // Log
   logEntries: LogEntry[];
@@ -74,6 +78,7 @@ interface GameStore {
   clearThinking: () => void;
   updatePwin: (result: PwinResult) => void;
   clearPwin: () => void;
+  clearActionsPwin: () => void;
   setEvaluating: (v: boolean) => void;
   addLog: (message: string, level?: LogEntry['level'], html?: boolean) => void;
   clearLog: () => void;
@@ -108,6 +113,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   lastPwin: null,
   lastPwinStep: -1,
   isEvaluating: false,
+  lastRawPwin: null,
+  lastActionsPwin: null,
   logEntries: [],
   _logId: 0,
   replayMode: false,
@@ -164,10 +171,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       lastPwin: smoothed,
       lastPwinStep: gameState?.action_step ?? 0,
+      lastRawPwin: result.pwin_by_color,
+      lastActionsPwin: result.actions_pwin ?? null,
     });
   },
 
-  clearPwin: () => set({ lastPwin: null, lastPwinStep: -1 }),
+  clearPwin: () => set({ lastPwin: null, lastPwinStep: -1, lastRawPwin: null, lastActionsPwin: null }),
+  clearActionsPwin: () => set({ lastActionsPwin: null, lastRawPwin: null }),
 
   setEvaluating: (v) => set({ isEvaluating: v }),
 
@@ -210,6 +220,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     lastPwin: null,
     lastPwinStep: -1,
     isEvaluating: false,
+    lastRawPwin: null,
+    lastActionsPwin: null,
     logEntries: [],
     _logId: 0,
     replayMode: false,

@@ -55,6 +55,7 @@ export function useGameLoop() {
   const setThinking = useGameStore(s => s.setThinking);
   const clearThinking = useGameStore(s => s.clearThinking);
   const updatePwin = useGameStore(s => s.updatePwin);
+  const clearActionsPwin = useGameStore(s => s.clearActionsPwin);
   const setEvaluating = useGameStore(s => s.setEvaluating);
   const addLog = useGameStore(s => s.addLog);
   const setAutoPlaying = useGameStore(s => s.setAutoPlaying);
@@ -211,6 +212,8 @@ export function useGameLoop() {
   const submitAction = useCallback(async (action: PlayableAction) => {
     if (!gameId || humanInFlight.current) return;
     humanInFlight.current = true;
+    // Drop stale suggestions immediately so the panel doesn't show opponent-turn data.
+    clearActionsPwin();
 
     const requestStep = gameState?.action_step ?? 0;
 
@@ -243,7 +246,7 @@ export function useGameLoop() {
     } finally {
       humanInFlight.current = false;
     }
-  }, [gameId, gameState, autoPlaying, addLog, refreshState, evaluatePosition]);
+  }, [gameId, gameState, autoPlaying, addLog, refreshState, evaluatePosition, clearActionsPwin]);
 
   const autoAdvanceAI = useCallback(async () => {
     const runId = ++autoAdvanceRunId.current;

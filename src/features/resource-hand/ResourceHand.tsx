@@ -100,6 +100,7 @@ export function ResourceHand({
                 type={t}
                 count={devCards[t]}
                 isMyTurn={isMyTurn}
+                serverCanPlay={devCardsServerAllows ? devCardsServerAllows[t] : undefined}
                 onPlay={onPlayDev}
               />
             ))

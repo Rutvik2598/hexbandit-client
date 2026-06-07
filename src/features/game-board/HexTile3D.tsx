@@ -89,6 +89,7 @@ interface HexTile3DProps {
   texture: THREE.Texture | null;
   hasRobber?: boolean;
   isLegalRobber?: boolean;
+  isPreview?: boolean;
   isActive?: boolean;
   onClick?: () => void;
   onPointerEnter?: () => void;
@@ -101,6 +102,7 @@ export default function HexTile3D({
   texture,
   hasRobber,
   isLegalRobber,
+  isPreview,
   isActive,
   onClick,
   onPointerEnter,
@@ -177,11 +179,11 @@ export default function HexTile3D({
         <cylinderGeometry args={[INNER_RADIUS, INNER_RADIUS, HEX_DEPTH + 0.004, 6]} />
       </mesh>
 
-      {/* Legal robber pulse overlay */}
+      {/* Legal / preview robber pulse overlay */}
       {isLegalRobber && (
         <mesh ref={pulseRef} position={[0, INNER_TOP_Y + 0.002, 0]}>
           <cylinderGeometry args={[INNER_RADIUS, INNER_RADIUS, 0.004, 6]} />
-          <meshStandardMaterial color="#64b5f6" transparent opacity={0.35} depthWrite={false} />
+          <meshStandardMaterial color={isPreview ? '#4ade80' : '#64b5f6'} transparent opacity={0.38} depthWrite={false} />
         </mesh>
       )}
 
