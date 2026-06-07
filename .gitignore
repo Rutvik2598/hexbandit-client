@@ -5,6 +5,9 @@ node_modules
 dist
 dist-ssr
 
+# Test coverage — regenerated on every run, uploaded to Codecov by CI
+coverage
+
 # Environment variables — never commit these
 .env
 .env.local
