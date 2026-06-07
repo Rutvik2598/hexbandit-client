@@ -1,5 +1,16 @@
 # Hexbandit Client
 
+[![Tests](https://github.com/Rutvik2598/hexbandit-client/actions/workflows/test.yml/badge.svg)](https://github.com/Rutvik2598/hexbandit-client/actions/workflows/test.yml)
+[![Coverage](https://codecov.io/gh/Rutvik2598/hexbandit-client/branch/main/graph/badge.svg)](https://codecov.io/gh/Rutvik2598/hexbandit-client)
+
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vite.dev)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Three.js](https://img.shields.io/badge/Three.js-R3F-black?style=flat-square&logo=threedotjs&logoColor=white)](https://docs.pmnd.rs/react-three-fiber)
+[![Zustand](https://img.shields.io/badge/Zustand-5-FF6B35?style=flat-square)](https://zustand-demo.pmnd.rs)
+[![Vitest](https://img.shields.io/badge/Vitest-4-6E9F18?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev)
+
 A production-quality web frontend for the [Hexbandit API](https://staging-api.hexbandit.io) — a Catan AI engine. Play against state-of-the-art reinforcement-learning bots, analyse every move, and watch games live via shareable spectator links.
 
 ---
@@ -48,6 +59,7 @@ A production-quality web frontend for the [Hexbandit API](https://staging-api.he
 | Server state | TanStack Query |
 | Animation | Framer Motion |
 | Routing | React Router v7 |
+| Testing | Vitest (125 unit tests, CI via GitHub Actions) |
 
 ---
 
@@ -97,6 +109,16 @@ npm run preview      # serve the production build locally
 ```bash
 npm run lint
 ```
+
+### Tests
+
+```bash
+npm test                  # run once (CI mode)
+npm run test:watch        # watch mode during development
+npm run test:coverage     # with coverage report
+```
+
+125 unit tests covering board coordinates, game stats computation, action log formatting, and interaction store state transitions. Coverage is reported to Codecov on every push.
 
 ---
 
