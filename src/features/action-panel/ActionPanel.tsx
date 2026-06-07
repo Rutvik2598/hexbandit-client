@@ -511,7 +511,6 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
   const isRolling = rollPending || (!isHumanTurn && thinking.phase !== 'idle' && hasRoll);
 
 
-  const isThinking = thinking.phase === 'thinking' || thinking.phase === 'submitting';
 
   if (!gameState) return null;
 
@@ -527,28 +526,23 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
   // ---- persistent status card content ----
   const statusContent = (() => {
     if (!humanIndices.length) return null;
-    if (isThinking) return {
-      eyebrow: 'AI Thinking', eyebrowPulse: true,
-      text: thinking.message, textColor: 'var(--text-dim)' as string,
-      progress: thinking.progress,
-    };
     if (!isHumanTurn) return {
-      eyebrow: 'Waiting', eyebrowPulse: false,
+      eyebrow: 'Waiting',
       text: `${currentPlayer?.name ?? 'Opponent'} is playing…`, textColor: 'var(--text-faint)' as string,
       progress: null,
     };
-    if (hasDiscard) return { eyebrow: 'Action Required', eyebrowPulse: false, text: 'Choose cards to discard', textColor: 'var(--p-red)' as string, progress: null };
-    if (hasMoveRobber) return { eyebrow: 'Place Robber', eyebrowPulse: false, text: 'Click a tile to move the robber', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (isDecideAcceptees) return { eyebrow: 'Trade', eyebrowPulse: false, text: 'Pick who to trade with', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (hasTradeResponse) return { eyebrow: 'Trade Offer', eyebrowPulse: false, text: 'Respond to the trade offer', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (phase === 'INITIAL_BUILD' && hasBuildSettlement) return { eyebrow: 'Setup Phase', eyebrowPulse: false, text: 'Place your settlement on a corner', textColor: '#6ee7b7' as string, progress: null };
-    if (phase === 'INITIAL_BUILD' && hasBuildRoad) return { eyebrow: 'Setup Phase', eyebrowPulse: false, text: 'Place a road next to your settlement', textColor: '#6ee7b7' as string, progress: null };
-    if (hasRoll) return { eyebrow: 'Your Turn', eyebrowPulse: false, text: 'Roll the dice to start', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (mode === 'BUILD_ROAD' || roadIsForced) return { eyebrow: 'Build Mode', eyebrowPulse: false, text: 'Click a glowing edge to place road', textColor: 'var(--sapphire-bright)' as string, progress: null };
-    if (mode === 'BUILD_SETTLEMENT') return { eyebrow: 'Build Mode', eyebrowPulse: false, text: 'Click a glowing corner to place settlement', textColor: '#6ee7b7' as string, progress: null };
-    if (mode === 'BUILD_CITY') return { eyebrow: 'Build Mode', eyebrowPulse: false, text: 'Click a settlement to upgrade to city', textColor: 'var(--amber-soft)' as string, progress: null };
-    if (hasEndTurn) return { eyebrow: 'Your Turn', eyebrowPulse: false, text: 'Build, trade, or end your turn', textColor: 'var(--text-dim)' as string, progress: null };
-    return { eyebrow: 'Your Turn', eyebrowPulse: false, text: 'Awaiting action…', textColor: 'var(--text-faint)' as string, progress: null };
+    if (hasDiscard) return { eyebrow: 'Action Required', text: 'Choose cards to discard', textColor: 'var(--p-red)' as string, progress: null };
+    if (hasMoveRobber) return { eyebrow: 'Place Robber', text: 'Click a tile to move the robber', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (isDecideAcceptees) return { eyebrow: 'Trade', text: 'Pick who to trade with', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (hasTradeResponse) return { eyebrow: 'Trade Offer', text: 'Respond to the trade offer', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (phase === 'INITIAL_BUILD' && hasBuildSettlement) return { eyebrow: 'Setup Phase', text: 'Place your settlement on a corner', textColor: '#6ee7b7' as string, progress: null };
+    if (phase === 'INITIAL_BUILD' && hasBuildRoad) return { eyebrow: 'Setup Phase', text: 'Place a road next to your settlement', textColor: '#6ee7b7' as string, progress: null };
+    if (hasRoll) return { eyebrow: 'Your Turn', text: 'Roll the dice to start', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (mode === 'BUILD_ROAD' || roadIsForced) return { eyebrow: 'Build Mode', text: 'Click a glowing edge to place road', textColor: 'var(--sapphire-bright)' as string, progress: null };
+    if (mode === 'BUILD_SETTLEMENT') return { eyebrow: 'Build Mode', text: 'Click a glowing corner to place settlement', textColor: '#6ee7b7' as string, progress: null };
+    if (mode === 'BUILD_CITY') return { eyebrow: 'Build Mode', text: 'Click a settlement to upgrade to city', textColor: 'var(--amber-soft)' as string, progress: null };
+    if (hasEndTurn) return { eyebrow: 'Your Turn', text: 'Build, trade, or end your turn', textColor: 'var(--text-dim)' as string, progress: null };
+    return { eyebrow: 'Your Turn', text: 'Awaiting action…', textColor: 'var(--text-faint)' as string, progress: null };
   })();
 
   // ---- render ----
@@ -559,7 +553,7 @@ export default function ActionPanel({ onAction, disabled, width = 190, floatTrad
       {statusContent && (
         <div className="panel" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
           <div
-            className={`eyebrow${statusContent.eyebrowPulse ? ' thinking-pulse' : ''}`}
+            className="eyebrow"
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
           >
             <span>{statusContent.eyebrow}</span>

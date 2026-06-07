@@ -15,27 +15,35 @@ import type { PlayerColor } from '@/shared/types/game';
 useGLTF.preload('/assets/models/settlement.glb');
 useGLTF.preload('/assets/models/city.glb');
 
-const LIFT = 0.155;
+const LIFT = 0.0;
 
-// Sketchfab root bakes Z-up→Y-up: model-Z→worldY, model-Y→world(-Z).
-// The models were originally Y-up STLs, so their actual height axis (model Y) ends up in
-// world -Z. Rx(PI/2) maps world -Z → world +Y to stand each piece upright.
-// After that rotation, the scale/centering is based on the original accessor bounds:
-//   Settlement: accessor X=[8.313,18.313] cx=13.313 | Y=[1.519,13.519] height=12 | Z=[0,14] depth-center=7
-//   City:       accessor X=[22.562,42.562] cx=32.562 | Y=[1.519,21.519] height=20 | Z=[0,10] depth-center=5
 const S_SCALE = 0.30 / 12;
-const S_POS: [number, number, number] = [
-  -13.313 * S_SCALE,
-  -1.519 * S_SCALE,
-  -7.0 * S_SCALE,
-];
+const S_ROTATION: [number, number, number] = [Math.PI / 2, 0, 0];
 
 const C_SCALE = 0.40 / 20;
-const C_POS: [number, number, number] = [
-  -32.562 * C_SCALE,
-  -1.519 * C_SCALE,
-  -5.0 * C_SCALE,
-];
+const C_ROTATION: [number, number, number] = [Math.PI / 2, 0, 0];
+
+/**
+ * Computes a centering offset for a scene after applying rotation + uniform scale,
+ * so that the model sits with its base at Y=0 and is centred on XZ.
+ */
+function computeAnchor(
+  scene: THREE.Group,
+  rotation: [number, number, number],
+  scale: number,
+): [number, number, number] {
+  const pivot = new THREE.Group();
+  pivot.rotation.set(...rotation);
+  pivot.scale.setScalar(scale);
+  pivot.add(scene.clone(true));
+  pivot.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(pivot);
+  return [
+    -(box.min.x + box.max.x) / 2,
+    -box.min.y,
+    -(box.min.z + box.max.z) / 2,
+  ];
+}
 
 function applyPlayerColor(
   scene: THREE.Group,
@@ -56,10 +64,11 @@ function applyPlayerColor(
 
 function Settlement({ color }: { color: PlayerColor }) {
   const { scene } = useGLTF('/assets/models/settlement.glb') as { scene: THREE.Group };
-  const cloned = useMemo(
-    () => applyPlayerColor(scene, PLAYER_COLORS[color] ?? '#888', 0.7, 0.1),
-    [scene, color],
-  );
+  const { cloned, anchor } = useMemo(() => {
+    const cloned = applyPlayerColor(scene, PLAYER_COLORS[color] ?? '#888', 0.7, 0.1);
+    const anchor = computeAnchor(scene, S_ROTATION, S_SCALE);
+    return { cloned, anchor };
+  }, [scene, color]);
   const dropRef = useRef<THREE.Group>(null);
   const tRef = useRef(0);
   useFrame((_, delta) => {
@@ -69,17 +78,20 @@ function Settlement({ color }: { color: PlayerColor }) {
   });
   return (
     <group ref={dropRef} position={[0, DROP_HEIGHT, 0]}>
-      <primitive object={cloned} rotation={[Math.PI / 2, 0, 0]} position={S_POS} scale={S_SCALE} />
+      <group position={anchor}>
+        <primitive object={cloned} rotation={S_ROTATION} scale={S_SCALE} />
+      </group>
     </group>
   );
 }
 
 function City({ color }: { color: PlayerColor }) {
   const { scene } = useGLTF('/assets/models/city.glb') as { scene: THREE.Group };
-  const cloned = useMemo(
-    () => applyPlayerColor(scene, PLAYER_COLORS[color] ?? '#888', 0.65, 0.15),
-    [scene, color],
-  );
+  const { cloned, anchor } = useMemo(() => {
+    const cloned = applyPlayerColor(scene, PLAYER_COLORS[color] ?? '#888', 0.65, 0.15);
+    const anchor = computeAnchor(scene, C_ROTATION, C_SCALE);
+    return { cloned, anchor };
+  }, [scene, color]);
   const dropRef = useRef<THREE.Group>(null);
   const tRef = useRef(0);
   useFrame((_, delta) => {
@@ -89,7 +101,9 @@ function City({ color }: { color: PlayerColor }) {
   });
   return (
     <group ref={dropRef} position={[0, DROP_HEIGHT, 0]}>
-      <primitive object={cloned} rotation={[Math.PI / 2, 0, 0]} position={C_POS} scale={C_SCALE} />
+      <group position={anchor}>
+        <primitive object={cloned} rotation={C_ROTATION} scale={C_SCALE} />
+      </group>
     </group>
   );
 }

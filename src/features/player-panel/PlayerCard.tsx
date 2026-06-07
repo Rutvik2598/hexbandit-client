@@ -11,6 +11,29 @@ interface PlayerCardProps {
   pwin?: number | null;
   compact?: boolean;
   resourceGains?: Partial<Record<string, number>>;
+  isThinking?: boolean;
+}
+
+const WAVEFORM_DELAYS = [0, 0.18, 0.09, 0.27, 0.15];
+
+function ThinkingWaveform({ color }: { color: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2.5, height: 14 }}>
+      {WAVEFORM_DELAYS.map((delay, i) => (
+        <motion.div
+          key={i}
+          style={{
+            width: 3,
+            borderRadius: 2,
+            background: color,
+            originY: 1,
+          }}
+          animate={{ height: ['4px', '14px', '4px'] }}
+          transition={{ duration: 0.7, repeat: Infinity, ease: 'easeInOut', delay }}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default function PlayerCard({
@@ -19,6 +42,7 @@ export default function PlayerCard({
   isHumanPlayer,
   pwin,
   resourceGains: _resourceGains,
+  isThinking = false,
 }: PlayerCardProps) {
   const color = player.color as PlayerColor;
   const hex   = PLAYER_COLORS[color] || '#ccc';
@@ -40,13 +64,17 @@ export default function PlayerCard({
         transition: 'background 0.2s',
       }}
       animate={isCurrentTurn ? {
-        boxShadow: [
+        boxShadow: isThinking ? [
+          `0 0 0 1px ${hex}, 0 0 28px 2px ${hex}`,
+          `0 0 0 1px ${hex}, 0 0 48px 8px ${hex}`,
+          `0 0 0 1px ${hex}, 0 0 28px 2px ${hex}`,
+        ] : [
           `0 0 0 1px ${hex}, 0 0 18px -2px ${hex}`,
           `0 0 0 1px ${hex}, 0 0 34px 2px ${hex}`,
           `0 0 0 1px ${hex}, 0 0 18px -2px ${hex}`,
         ],
       } : { boxShadow: 'none' }}
-      transition={{ duration: 2.4, repeat: isCurrentTurn ? Infinity : 0, ease: 'easeInOut' }}
+      transition={{ duration: isThinking ? 1.2 : 2.4, repeat: isCurrentTurn ? Infinity : 0, ease: 'easeInOut' }}
     >
       {/* top row: color dot + name + turn badge + VP */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -74,13 +102,18 @@ export default function PlayerCard({
               marginLeft: 'auto',
               fontSize: 9.5, fontWeight: 800, letterSpacing: '0.12em', color: hex,
               textTransform: 'uppercase',
-              display: 'flex', alignItems: 'center', gap: 4,
+              display: 'flex', alignItems: 'center', gap: 6,
             }}
-            animate={{ opacity: [1, 0.5, 1] }}
+            animate={isThinking ? {} : { opacity: [1, 0.5, 1] }}
             transition={{ duration: 1.2, repeat: Infinity }}
           >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: hex, boxShadow: `0 0 8px ${hex}` }} />
-            Turn
+            {isThinking
+              ? <ThinkingWaveform color={hex} />
+              : <>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: hex, boxShadow: `0 0 8px ${hex}` }} />
+                  Turn
+                </>
+            }
           </motion.span>
         )}
 

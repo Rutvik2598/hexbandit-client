@@ -17,7 +17,7 @@ function springDrop(t: number): number {
 const ROAD_HEIGHT = 0.07;
 const ROAD_WIDTH = 0.11;
 // Total length trimmed across both ends so roads don't clip into vertex pieces or each other.
-const ROAD_END_GAP = 0.32;
+const ROAD_END_GAP = 0.42;
 
 // Sketchfab Z-up→Y-up root transform: model-Z→worldY, model-Y→world(-Z).
 // Road world-space bounds:
