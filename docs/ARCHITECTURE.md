@@ -15,16 +15,17 @@
 6. [Responsive Design](#6-responsive-design)
 7. [Static & Mocked Sections](#7-static--mocked-sections)
 8. [Directory Structure](#8-directory-structure)
-9. [State Management](#9-state-management)
-10. [Core Game Loop](#10-core-game-loop)
-11. [API Layer](#11-api-layer)
-12. [Board Rendering](#12-board-rendering)
-13. [Interaction Model](#13-interaction-model)
-14. [Replay & Analysis](#14-replay--analysis)
-15. [Win Probability & Evaluation](#15-win-probability--evaluation)
-16. [Testing](#16-testing)
-17. [Known Gaps](#17-known-gaps)
-18. [Recommendations for Future Work](#18-recommendations-for-future-work)
+9. [Deployment](#9-deployment)
+10. [State Management](#10-state-management)
+11. [Core Game Loop](#11-core-game-loop)
+12. [API Layer](#12-api-layer)
+13. [Board Rendering](#13-board-rendering)
+14. [Interaction Model](#14-interaction-model)
+15. [Replay & Analysis](#15-replay--analysis)
+16. [Win Probability & Evaluation](#16-win-probability--evaluation)
+17. [Testing](#17-testing)
+18. [Known Gaps](#18-known-gaps)
+19. [Recommendations for Future Work](#19-recommendations-for-future-work)
 
 ---
 
@@ -32,7 +33,9 @@
 
 Browser client for the Hexbandit API — a Catan AI engine. The frontend owns rendering, interaction, and visualization; the backend owns game logic, move legality, bot decisions, and evaluation.
 
-**User flows:** configure a 2–4 player game vs. bots → play on an interactive 3D board → view live win-probability after every move → replay any game move-by-move with per-step AI analysis → share via spectator link → post-game standings and stats breakdown.
+**User flows:** configure a 2–4 player game vs. bots → play on an interactive 3D board → view live win-probability after every move → replay any game move-by-move with per-step AI analysis → share a live spectator link → post-game standings and stats breakdown.
+
+**Spectator mode:** any active game can be watched in real-time via `/spectate/:gameId`. The spectator view polls `GET /games/{id}/state` every 2.5 s, renders the full board and player panels in read-only mode (no actions, no interaction), and shows a pulsing **Live** badge while the game is in progress. When the game ends it auto-loads the recording and enters replay mode. The share button copies the spectator URL to clipboard — anyone with the link can watch without an account.
 
 ---
 
@@ -194,7 +197,7 @@ Coordinate systems (entities/board/coordinates.ts)
 | **Analysis — Road suggestion** — best moves ranked by win-delta, previewed on board | **Analysis — Robber placement** — candidate tiles highlighted on board |
 | ![Analysis road](screenshots/analysis_suggesting_road_location.png) | ![Analysis robber](screenshots/analysis_suggesting_knight_location.png) |
 | **Trade — Incoming offer** — Accept / Reject with give/get breakdown | **Trade — Choose partner** — pick which acceptee to confirm with |
-| ![Trade accept](screenshots/trade_accept_window.png) | ![Trade partner](screenshots/trade_request_window.png) |
+| ![Trade accept](screenshots/trade_request_window.png) | ![Trade partner](screenshots/trade_accept_window.png) |
 | **Discard panel** — +/− per resource, live "N left" counter | **Settings** — volume, fullscreen, keyboard shortcut reference |
 | ![Discard](screenshots/discard_res_window.png) | ![Settings](screenshots/settings_window.png) |
 | **Game Over** — winner, VP breakdown, Replay / Rematch CTAs | **Post-game Stats** — per-player roads, knights, dev cards, final hand |
@@ -248,7 +251,30 @@ src/
 
 ---
 
-## 9. State Management
+## 9. Deployment
+
+The app is a Vite SPA deployed to **Vercel**.
+
+**`vercel.json`** (project root) is required for client-side routing to work in production:
+
+```json
+{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
+```
+
+Without this, Vercel's static file server returns 404 for any deep-linked route (e.g. `/spectate/:gameId`, `/lobby`) because those paths have no corresponding file — they are React Router routes that only resolve once `index.html` is loaded. Vite's dev server handles this automatically, which is why all routes work on localhost.
+
+**Environment variables** required in Vercel project settings:
+
+| Variable | Purpose |
+|----------|---------|
+| `VITE_API_BASE_URL` | Backend API base URL |
+| `VITE_API_KEY` | API authentication key |
+
+Both fall back to defaults if unset (`https://staging-api.hexbandit.io` and empty key respectively), but the app will fail API auth in production without the correct values.
+
+---
+
+## 10. State Management
 
 Four Zustand stores:
 
@@ -267,7 +293,7 @@ Four Zustand stores:
 
 ---
 
-## 10. Core Game Loop
+## 11. Core Game Loop
 
 `useGameLoop` (`src/shared/hooks/useGameLoop.ts`) — consumed only by `GamePage`.
 
@@ -297,7 +323,7 @@ GamePage mounts
 
 ---
 
-## 11. API Layer
+## 12. API Layer
 
 **Client (`client.ts`):** thin `fetch` wrapper — `X-API-Key` auth header, `ApiError` with status/path/detail, auto-JSON, 204 → undefined, friendly 502/503/504 messages.
 
@@ -324,7 +350,7 @@ Timeout cancels the request via `DELETE /moves/{requestId}`.
 
 ---
 
-## 12. Board Rendering
+## 13. Board Rendering
 
 **Coordinate system:** cube coords `[x, y, z]` where `x+y+z=0`. 19 tiles · 54 nodes · 72 edges. Adjacency map built at module load. `tileToWorld3D()` / `nodeToWorld3D()` map to XZ plane (`HEX_RADIUS_3D = 1.2`).
 
@@ -346,7 +372,7 @@ R3F pointer events (`onPointerEnter`, `onPointerLeave`, `onClick`) on each mesh 
 
 ---
 
-## 13. Interaction Model
+## 14. Interaction Model
 
 | Mode | Trigger | Effect |
 |------|---------|--------|
@@ -363,7 +389,7 @@ Analysis suggestions set `previewNode / previewEdge / previewTile` independently
 
 ---
 
-## 14. Replay & Analysis
+## 15. Replay & Analysis
 
 - `getRecording()` returns `RecordingFrame[]` — each frame has `turn`, `action`, `state`, `evaluate`
 - `useReplayJump(step)` applies `frame.state` to the store (re-renders board) and fetches move analysis from `POST /moves/analyze` if the action was taken by a human player
@@ -371,7 +397,7 @@ Analysis suggestions set `previewNode / previewEdge / previewTile` independently
 
 ---
 
-## 15. Win Probability & Evaluation
+## 16. Win Probability & Evaluation
 
 Evaluation triggers: after every human move (if step advanced) or on board load (if human turn). Skipped during `INITIAL_BUILD` and after a winner is set.
 
@@ -381,7 +407,7 @@ Evaluation triggers: after every human move (if step advanced) or on board load 
 
 ---
 
-## 16. Testing
+## 17. Testing
 
 **Coverage: ~70% · 209 tests · Vitest 4 · Node environment · `@vitest/coverage-v8` · Codecov**
 
@@ -402,7 +428,7 @@ Evaluation triggers: after every human move (if step advanced) or on board load 
 
 ---
 
-## 17. Known Gaps
+## 18. Known Gaps
 
 - **`GamePage.tsx` (1 453 lines)** — handles layout, init, phase detection, animations, modals, and shortcuts all in one file
 - **`gameStore.ts` untested** — largest store, zero coverage; contains pwin smoothing and log capping logic
@@ -416,7 +442,7 @@ Evaluation triggers: after every human move (if step advanced) or on board load 
 
 ---
 
-## 18. Recommendations for Future Work
+## 19. Recommendations for Future Work
 
 ### High impact, low effort
 1. **Test `gameStore.ts`** — pure state transforms (pwin smoothing, log capping); pushes coverage to ~85%
