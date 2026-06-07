@@ -1256,9 +1256,15 @@ export default function GamePage() {
         }}>
           {!replayMode ? (
             bp === 'desktop' ? (
-              <ActionPanel onAction={handleAction} disabled={isDisabled} floatTrade />
+              <div className="scrollbar-none" style={{
+                maxHeight: `calc(100vh - ${gap * 2 + 56 + bottomOffset}px)`,
+                overflowY: 'auto',
+                display: 'flex', flexDirection: 'column',
+              }}>
+                <ActionPanel onAction={handleAction} disabled={isDisabled} floatTrade />
+              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, pointerEvents: 'auto' }}>
+              <div className="scrollbar-none" style={{ display: 'flex', flexDirection: 'column', gap: 7, pointerEvents: 'auto', maxHeight: `calc(100vh - ${gap * 2 + 96 + bottomOffset}px)`, overflowY: 'auto' }}>
                 {needsSpecialAction ? (
                   <ActionPanel onAction={handleAction} disabled={isDisabled} />
                 ) : (
