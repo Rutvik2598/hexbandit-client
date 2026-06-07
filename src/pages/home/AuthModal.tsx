@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/static-components */
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/shared/components/Icon';

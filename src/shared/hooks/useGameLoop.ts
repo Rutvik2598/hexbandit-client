@@ -196,6 +196,21 @@ export function useGameLoop() {
     }
   }, [gameId, setThinking, clearThinking, addLog, refreshState, evaluatePosition]);
 
+  const autoAdvanceAI = useCallback(async () => {
+    const runId = ++autoAdvanceRunId.current;
+    while (
+      gameId &&
+      !useGameStore.getState().gameState?.winner &&
+      !isCurrentPlayerHumanNow() &&
+      autoAdvanceRunId.current === runId &&
+      !useGameStore.getState().autoPlaying
+    ) {
+      const ok = await doAiMove();
+      if (!ok) break;
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }, [gameId, doAiMove]);
+
   const submitAction = useCallback(async (action: PlayableAction) => {
     if (!gameId || humanInFlight.current) return;
     humanInFlight.current = true;
@@ -231,22 +246,7 @@ export function useGameLoop() {
     } finally {
       humanInFlight.current = false;
     }
-  }, [gameId, gameState, autoPlaying, addLog, refreshState, evaluatePosition, clearActionsPwin]);
-
-  const autoAdvanceAI = useCallback(async () => {
-    const runId = ++autoAdvanceRunId.current;
-    while (
-      gameId &&
-      !useGameStore.getState().gameState?.winner &&
-      !isCurrentPlayerHumanNow() &&
-      autoAdvanceRunId.current === runId &&
-      !useGameStore.getState().autoPlaying
-    ) {
-      const ok = await doAiMove();
-      if (!ok) break;
-      await new Promise(r => setTimeout(r, 300));
-    }
-  }, [gameId, doAiMove]);
+  }, [gameId, gameState, autoPlaying, addLog, refreshState, evaluatePosition, clearActionsPwin, autoAdvanceAI]);
 
   const startAutoPlay = useCallback(async () => {
     setAutoPlaying(true);
@@ -272,7 +272,7 @@ export function useGameLoop() {
       }
       await new Promise(r => setTimeout(r, 200));
     }
-  }, [gameId, isCurrentPlayerHuman, doAiMove, setAutoPlaying, addLog]);
+  }, [gameId, isCurrentPlayerHuman, doAiMove, setAutoPlaying]);
 
   const stopAutoPlay = useCallback(() => {
     setAutoPlaying(false);
@@ -308,7 +308,7 @@ export function useGameLoop() {
 
   const cleanup = useCallback(async () => {
     if (gameId) {
-      try { await deleteGame(gameId); } catch {}
+      try { await deleteGame(gameId); } catch { /* cleanup is best-effort */ }
     }
   }, [gameId]);
 

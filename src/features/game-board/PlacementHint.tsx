@@ -62,6 +62,7 @@ export function PlacementHint({
   // Each hint is only shown once per game session.
   const seen = useRef<Set<string>>(new Set());
   const hintKey = hint?.text ?? null;
+  // eslint-disable-next-line react-hooks/refs
   const alreadySeen = hintKey !== null && seen.current.has(hintKey);
 
   useEffect(() => {

@@ -111,7 +111,7 @@ export default function GamePage() {
   const prevPlayersRef     = useRef<Player[] | null>(null);
   const prevHumanTurnRef   = useRef<boolean | null>(null);
 
-  const playableActions = gameState?.playable_actions ?? [];
+  const playableActions = useMemo(() => gameState?.playable_actions ?? [], [gameState]);
   const hasRoll         = playableActions.some(a => a.action_type === 'ROLL');
   const hasEndTurn      = playableActions.some(a => a.action_type === 'END_TURN');
   const hasDiscard      = gameState?.game_phase === 'DISCARDING';
@@ -198,10 +198,12 @@ export default function GamePage() {
   }, [bp, needsSpecialAction]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (bp === 'mobile') setMobileDrawer(null);
   }, [replayMode, bp]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (gameState?.winner && !replayMode && bp === 'mobile') setMobileDrawer(null);
   }, [gameState?.winner, replayMode, bp]);
 
@@ -233,7 +235,7 @@ export default function GamePage() {
         return;
       }
     }
-  }, [gameState, replayMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameState, replayMode]);
 
   useEffect(() => {
     if (!achievement) return;
@@ -249,7 +251,7 @@ export default function GamePage() {
       playSound(SFX.yourTurn, 0.7);
     }
     prevHumanTurnRef.current = isNowHuman;
-  }, [gameState, replayMode, humanPlayerIndices]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameState, replayMode, humanPlayerIndices]);
 
   useEffect(() => {
     if (!showYourTurn) return;

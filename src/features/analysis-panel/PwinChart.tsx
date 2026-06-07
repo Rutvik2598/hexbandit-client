@@ -92,39 +92,12 @@ export default function PwinChart({ onJump }: Props) {
     if (pt) onJump(pt.frameIndex);
   }, [mouseToVbX, nearestPoint, onJump]);
 
-  if (!gameState) return null;
-
-  if (points.length < 2) {
-    return (
-      <div>
-        <div style={{
-          fontFamily: 'var(--ff-display)', fontSize: 10, fontWeight: 700,
-          letterSpacing: '0.18em', textTransform: 'uppercase',
-          color: 'var(--text-ghost)', paddingBottom: 6,
-        }}>
-          Win Probability
-        </div>
-        <div style={{
-          fontSize: 11.5, color: 'var(--text-ghost)', fontWeight: 600,
-          padding: '10px 0', textAlign: 'center',
-        }}>
-          No evaluation data in this recording
-        </div>
-      </div>
-    );
-  }
-
-  const players = gameState.players;
-
-  // ── Y-axis guide lines ────────────────────────────────────────────────────
-  const yGuides = [
-    { pwin: 1.0, label: '100' },
-    { pwin: 0.5, label: '50' },
-    { pwin: 0.0, label: '0' },
-  ];
+  // Hooks must be called before any early return
+  const players = useMemo(() => gameState?.players ?? [], [gameState]);
 
   // ── X-axis turn labels: up to 5 evenly spaced ────────────────────────────
   const xLabels = useMemo(() => {
+    if (points.length === 0) return [];
     const maxTurn = points[points.length - 1].turn;
     const interval = Math.ceil(maxTurn / 4);
     const labels: { x: number; label: string }[] = [];
@@ -147,6 +120,35 @@ export default function PwinChart({ onJump }: Props) {
     }).join(' ');
     return { color: player.color, hex, d };
   }).filter((p): p is NonNullable<typeof p> => p !== null), [players, points, maxFi]);
+
+  if (!gameState) return null;
+
+  if (points.length < 2) {
+    return (
+      <div>
+        <div style={{
+          fontFamily: 'var(--ff-display)', fontSize: 10, fontWeight: 700,
+          letterSpacing: '0.18em', textTransform: 'uppercase',
+          color: 'var(--text-ghost)', paddingBottom: 6,
+        }}>
+          Win Probability
+        </div>
+        <div style={{
+          fontSize: 11.5, color: 'var(--text-ghost)', fontWeight: 600,
+          padding: '10px 0', textAlign: 'center',
+        }}>
+          No evaluation data in this recording
+        </div>
+      </div>
+    );
+  }
+
+  // ── Y-axis guide lines ────────────────────────────────────────────────────
+  const yGuides = [
+    { pwin: 1.0, label: '100' },
+    { pwin: 0.5, label: '50' },
+    { pwin: 0.0, label: '0' },
+  ];
 
   // ── Cursor: find nearest data point to current replay step ────────────────
   const cursorPt = points.reduce((best, pt) =>

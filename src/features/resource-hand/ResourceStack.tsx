@@ -2,20 +2,7 @@
 import { useState } from 'react';
 import { ResourceIcon } from '@/shared/components/ResourceIcon';
 import type { ResourceType } from '@/shared/types/game';
-
-interface ResourceConfig {
-  key: ResourceType;
-  name: string;
-  color: string;
-}
-
-export const RESOURCE_CONFIG: ResourceConfig[] = [
-  { key: 'wood',  name: 'Wood',  color: 'var(--r-wood)'  },
-  { key: 'brick', name: 'Brick', color: 'var(--r-brick)' },
-  { key: 'sheep', name: 'Sheep', color: 'var(--r-sheep)' },
-  { key: 'wheat', name: 'Wheat', color: 'var(--r-wheat)' },
-  { key: 'ore',   name: 'Ore',   color: 'var(--r-ore)'   },
-];
+import type { ResourceConfig } from './resourceConfig';
 
 // Physical card face
 function ResCard({ color, name, resKey, enough }: {

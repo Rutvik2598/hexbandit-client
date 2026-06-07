@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ResourceIcon } from '@/shared/components/ResourceIcon';
 import { Icon } from '@/shared/components/Icon';
-import { RESOURCE_CONFIG } from '@/features/resource-hand/ResourceStack';
+import { RESOURCE_CONFIG } from '@/features/resource-hand/resourceConfig';
 import type { ResourceType, PlayableAction, ResourceCounts } from '@/shared/types/game';
 import { RESOURCE_ORDER } from '@/shared/constants';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';

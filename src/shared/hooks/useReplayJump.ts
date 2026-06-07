@@ -15,6 +15,7 @@ export function useReplayJump() {
   const humanColors = new Set(
     humanIndices.map(i => gameState?.players[i]?.color).filter(Boolean) as string[]
   );
+  const humanColorsKey = [...humanColors].join(',');
 
   const maxStep = replayFrames.length - 1;
 
@@ -43,5 +44,5 @@ export function useReplayJump() {
       setReplayAnalysis(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [maxStep, replayFrames, gameId, JSON.stringify([...humanColors])]);
+  }, [maxStep, replayFrames, gameId, humanColorsKey]);
 }

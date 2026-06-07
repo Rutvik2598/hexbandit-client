@@ -1,4 +1,5 @@
-import { ResourceStack, RESOURCE_CONFIG } from './ResourceStack';
+import { ResourceStack } from './ResourceStack';
+import { RESOURCE_CONFIG } from './resourceConfig';
 import { DevStack, DevHandEmpty } from './DevStack';
 import type { ResourceCounts, DevCardCounts, DevCardType } from '@/shared/types/game';
 

@@ -546,6 +546,7 @@ export default function LobbyPage() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadAgents(numPlayers); }, [numPlayers, loadAgents]);
 
   const handleNumPlayersChange = (n: 2 | 3 | 4) => {

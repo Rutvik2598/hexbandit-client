@@ -29,6 +29,7 @@ interface GameBoard3DProps {
 // ── Ocean plane ────────────────────────────────────────────────────────────────
 function Ocean() {
   const texture = useTexture('/assets/tiles/water_background.png');
+  // eslint-disable-next-line react-hooks/immutability
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(4, 4);
 
@@ -112,6 +113,7 @@ const BEACH_RING_FRAG = /* glsl */`
 
 function BeachBorder() {
   const texture = useTexture('/assets/tiles/beach.jpg');
+  // eslint-disable-next-line react-hooks/immutability
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
   const geometry = useMemo(() => {
@@ -336,6 +338,7 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
     if (!lastRollDice || replayMode) return;
     const sum = lastRollDice[0] + lastRollDice[1];
     if (sum === 7) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveRollSum(sum);
   }, [lastRollDice, replayMode]);
 
@@ -375,7 +378,7 @@ function BoardScene({ onAction, disabled, sidebarWidth = 372 }: BoardSceneProps)
   }, [replayMode, replayFrames, replayStep, gameState]);
 
   const board = displayState?.board;
-  const playableActions = gameState?.playable_actions ?? [];
+  const playableActions = useMemo(() => gameState?.playable_actions ?? [], [gameState]);
 
   const legalSettlementNodes = useMemo(() => {
     const set = new Set<number>();

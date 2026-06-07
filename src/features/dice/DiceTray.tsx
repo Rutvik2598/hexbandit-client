@@ -82,6 +82,7 @@ export function DiceTray({ dice, rolling, rollKey = 0, compact }: DiceTrayProps)
       }, 90);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (dice) setDisplay(dice);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };

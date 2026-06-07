@@ -18,7 +18,7 @@ const POLL_INTERVAL_MS = 2500;
 const SIDEBAR_W = 320;
 const GAP = 14;
 
-const noopAction = (_: PlayableAction) => {};
+const noopAction: (action: PlayableAction) => void = () => {};
 
 export default function SpectatorPage() {
   const { gameId } = useParams<{ gameId: string }>();

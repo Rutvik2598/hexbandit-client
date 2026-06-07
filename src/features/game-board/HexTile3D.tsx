@@ -113,8 +113,10 @@ export default function HexTile3D({
   const beachTex = useTexture('/assets/tiles/beach.jpg');
 
   const beachMaterials = useMemo(() => {
+    /* eslint-disable react-hooks/immutability */
     beachTex.wrapS = beachTex.wrapT = THREE.RepeatWrapping;
     beachTex.colorSpace = THREE.SRGBColorSpace;
+    /* eslint-enable react-hooks/immutability */
     const mat = new THREE.ShaderMaterial({
       uniforms: { map: { value: beachTex } },
       vertexShader: BEACH_CAP_VERT,

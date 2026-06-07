@@ -1,7 +1,7 @@
 // Each resource tile carries the DOM id "bank-anchor-{key}" consumed by FlyLayer.
 import { Icon } from '@/shared/components/Icon';
 import { ResourceIcon } from '@/shared/components/ResourceIcon';
-import { RESOURCE_CONFIG } from '@/features/resource-hand/ResourceStack';
+import { RESOURCE_CONFIG } from '@/features/resource-hand/resourceConfig';
 import type { ResourceCounts } from '@/shared/types/game';
 
 interface BankPanelProps {

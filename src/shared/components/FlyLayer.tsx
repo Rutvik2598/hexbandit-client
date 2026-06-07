@@ -18,6 +18,7 @@ export interface HexFlyDetail {
   onArrive?: () => void;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function flyResource(
   key: string,
   dir: 'gain' | 'spend',

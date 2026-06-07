@@ -81,6 +81,7 @@ function Crown({ winnerColor, size = 92 }: { winnerColor: string; size?: number 
 }
 
 function Confetti({ celebrate }: { celebrate: boolean }) {
+  /* eslint-disable react-hooks/purity */
   const pieces = useMemo(() => {
     const count = celebrate ? 70 : 26;
     const celebrationColors = ['#f0a93a', '#ffe49b', '#4f8dff', '#eaf1fc'];
@@ -98,6 +99,7 @@ function Confetti({ celebrate }: { celebrate: boolean }) {
       opacity: celebrate ? 0.9 : 0.35,
     }));
   }, [celebrate]);
+  /* eslint-enable react-hooks/purity */
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 2 }}>

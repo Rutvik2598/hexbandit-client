@@ -41,7 +41,6 @@ export default function PlayerCard({
   isCurrentTurn,
   isHumanPlayer,
   pwin,
-  resourceGains: _resourceGains,
   isThinking = false,
 }: PlayerCardProps) {
   const color = player.color as PlayerColor;
